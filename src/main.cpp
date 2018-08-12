@@ -100,6 +100,7 @@ int main() {
             measurement_package.car_yaw = deg2rad(j[1]["yaw"]);
             measurement_package.car_speed = j[1]["speed"];
             measurement_package.car_speed *= MPH_TO_MPS_CONVERSION;
+            measurement_package.car_lane = get_lane(measurement_package.car_d);
   
             // Previous path data given to the Planner
             for (auto x : j[1]["previous_path_x"]){
@@ -118,9 +119,19 @@ int main() {
             // Previous path's end s and d values 
             measurement_package.end_path_s = j[1]["end_path_s"];
             measurement_package.end_path_d = j[1]["end_path_d"];
-  
+            
             // // Sensor Fusion Data, a list of all other cars on the same side of the road.
-            // auto sensor_fusion = j[1]["sensor_fusion"]; //  [ id, x, y, vx, vy, s, d]
+            // for (int i = 0; i < j[1]["sensor_fusion"].size(); i++){
+            //     Car car;
+            //     car.id = j[1]["sensor_fusion"][0]; //  [ id, x, y, vx, vy, s, d]
+            //     car.x = j[1]["sensor_fusion"][1];
+            //     car.y = j[1]["sensor_fusion"][2];
+            //     car.vx = j[1]["sensor_fusion"][3];
+            //     car.vy = j[1]["sensor_fusion"][4];
+            //     car.s = j[1]["sensor_fusion"][5];
+            //     car.d = j[1]["sensor_fusion"][6];
+            //     measurement_package.sensor_fusion.push_back(car);
+            // }
 
             measurement_package.map_waypoints_x = map_waypoints_x;
             measurement_package.map_waypoints_y = map_waypoints_y;

@@ -1,5 +1,19 @@
 #ifndef MEASUREMENT_PACKAGE_H_
 #define MEASUREMENT_PACKAGE_H_
+#include <vector>
+
+using namespace std;
+
+struct Car {
+  int id;
+  double x;
+  double y;
+  double vx;
+  double vy;
+  double s;
+  double d;
+};
+
 
 class MeasurementPackage {
 public:
@@ -10,6 +24,7 @@ public:
   double car_d;
   double car_yaw;
   double car_speed;
+  int car_lane; // lane number
 
   // Previous path data given to the Planner
   vector<double> previous_path_x;
@@ -19,7 +34,7 @@ public:
   double end_path_d;
 
   // Sensor Fusion Data, a list of all other cars on the same side of the road.
-  // auto sensor_fusion = j[1]["sensor_fusion"]; //  [ id, x, y, vx, vy, s, d]
+  vector<Car> sensor_fusion; //  [ id, x, y, vx, vy, s, d]
 
   // map data
   vector<double> map_waypoints_x;

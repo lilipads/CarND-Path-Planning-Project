@@ -34,14 +34,12 @@ public:
 
     json next_state(const MeasurementPackage &m);
 
-// private:
-// 	double previous_path_end_x;
-// 	double previous_path_end_y;
-// 	double previous_path_end_s;
-// 	double previous_path_end_d;
-// 	double previous_path_end_speed;
-// 	double previous_path_end_acceleration;
-// 	double previous_path_end_yaw;
+private:
+	// double previous_path_end_x;
+	// double previous_path_end_y;
+	double previous_path_end_velocity = 0;
+	double previous_path_end_acceleration = 0;
+	// double previous_path_end_yaw;
 };
 
 #endif /* FSM_H_ */
