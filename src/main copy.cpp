@@ -9,8 +9,8 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "spline.h"
-#include "fsm.h"
-#include "util.h"
+#include "utils.h"
+
 using namespace std;
 
 // for convenience
@@ -47,8 +47,6 @@ int main() {
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
 
-  FSM fsm;
-
   ifstream in_map_(map_file_.c_str(), ifstream::in);
 
   string line;
@@ -71,9 +69,8 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  h.onMessage([&fsm, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-    &map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, 
-    char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+                     uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -89,47 +86,42 @@ int main() {
         string event = j[0].get<string>();
         
         if (event == "telemetry") {
-            MeasurementPackage measurement_package;
-
-            // j[1] is the data JSON object            
+          // j[1] is the data JSON object
+          
         	// Main car's localization Data
-            measurement_package.car_x = j[1]["x"];
-            measurement_package.car_y = j[1]["y"];
-            measurement_package.car_s = j[1]["s"];
-            measurement_package.car_d = j[1]["d"];
-            measurement_package.car_yaw = deg2rad(j[1]["yaw"]);
-            measurement_package.car_speed = j[1]["speed"];
-            measurement_package.car_speed *= MPH_TO_MPS_CONVERSION;
-  
-            // Previous path data given to the Planner
-            for (auto x : j[1]["previous_path_x"]){
-                measurement_package.previous_path_x.push_back(x);
-            }
-            for (auto y : j[1]["previous_path_y"]){
-                measurement_package.previous_path_y.push_back(y);
-            }
-            // for convenience of calculation later on, if there is no previous path
-            // add the car's current position
-            if (measurement_package.previous_path_x.size() == 0){
-                measurement_package.previous_path_x.push_back(measurement_package.car_x);
-                measurement_package.previous_path_y.push_back(measurement_package.car_y);
-            }
+          	double car_x = j[1]["x"];
+          	double car_y = j[1]["y"];
+          	double car_s = j[1]["s"];
+          	double car_d = j[1]["d"];
+          	double car_yaw = j[1]["yaw"];
+          	double car_speed = j[1]["speed"];
 
-            // Previous path's end s and d values 
-            measurement_package.end_path_s = j[1]["end_path_s"];
-            measurement_package.end_path_d = j[1]["end_path_d"];
-  
-            // // Sensor Fusion Data, a list of all other cars on the same side of the road.
-            // auto sensor_fusion = j[1]["sensor_fusion"]; //  [ id, x, y, vx, vy, s, d]
+          	// Previous path data given to the Planner
+          	auto previous_path_x = j[1]["previous_path_x"];
+          	auto previous_path_y = j[1]["previous_path_y"];
+          	// Previous path's end s and d values 
+          	double end_path_s = j[1]["end_path_s"];
+          	double end_path_d = j[1]["end_path_d"];
 
-            measurement_package.map_waypoints_x = map_waypoints_x;
-            measurement_package.map_waypoints_y = map_waypoints_y;
-            measurement_package.map_waypoints_s = map_waypoints_s;
-            measurement_package.map_waypoints_dx = map_waypoints_dx;
-            measurement_package.map_waypoints_dy = map_waypoints_dy;
+          	// Sensor Fusion Data, a list of all other cars on the same side of the road.
+          	auto sensor_fusion = j[1]["sensor_fusion"]; //  [ id, x, y, vx, vy, s, d]
 
-            json msgJson = fsm.next_state(measurement_package);
-            auto msg = "42[\"control\","+ msgJson.dump()+"]";
+          	json msgJson;
+
+          	vector<double> next_x_vals;
+          	vector<double> next_y_vals;
+
+
+          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+            for (int i = 1; i < 10; i ++){
+              vector<double> next_point = getXY(car_s + 0.4 * i, car_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+              next_x_vals.push_back(next_point[0]);
+              next_y_vals.push_back(next_point[1]);
+            }
+          	msgJson["next_x"] = next_x_vals;
+          	msgJson["next_y"] = next_y_vals;
+
+          	auto msg = "42[\"control\","+ msgJson.dump()+"]";
 
           	//this_thread::sleep_for(chrono::milliseconds(1000));
           	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
