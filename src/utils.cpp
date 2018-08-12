@@ -187,26 +187,26 @@ vector<double> car_to_map_coordinates(double car_x, double car_y, double car_ori
    return -1 at the end of my previously planned path, there is no car that will be below
    safe following distance in front of me
 */
-// int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m){
-//     int car_id = -1;
-//     double closest_gap = previous_path_end_velocity * REACTION_SECONDS;  // safe distance
-//     for (int i = 0; i < m.sensor_fusion.size(); i++){
-//         int their_lane = get_lane(m.sensor_fusion[i].d);
-//         // in my lane
-//         if (their_lane == m.car_lane){
-//             double their_speed = sqrt(m.sensor_fusion[i].vx * m.sensor_fusion[i].vx +
-//                 m.sensor_fusion[i].vy * m.sensor_fusion[i].vy);
-//             // where they will be at the end of my planned path
-//             double their_future_s = m.sensor_fusion[i].s + NUM_WAYPOINTS * WAYPOINT_INTERVAL * their_speed;
-//             // currently in front me, and in the future will be too close
-//             if ((m.sensor_fusion[i].s > m.car_s) && (their_future_s - previous_path_end_s < closest_gap)){
-//                 closest_gap = their_future_s - previous_path_end_s;
-//                 car_id = i;
-//             }
-//         }
-//     }
-//     return car_id;
-// }
+int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m){
+    int car_id = -1;
+    double closest_gap = previous_path_end_velocity * REACTION_SECONDS;  // safe distance
+    for (int i = 0; i < m.sensor_fusion.size(); i++){
+        int their_lane = get_lane(m.sensor_fusion[i].d);
+        // in my lane
+        if (their_lane == m.car_lane){
+            double their_speed = sqrt(m.sensor_fusion[i].vx * m.sensor_fusion[i].vx +
+                m.sensor_fusion[i].vy * m.sensor_fusion[i].vy);
+            // where they will be at the end of my planned path
+            double their_future_s = m.sensor_fusion[i].s + NUM_WAYPOINTS * WAYPOINT_INTERVAL * their_speed;
+            // currently in front me, and in the future will be too close
+            if ((m.sensor_fusion[i].s > m.car_s) && (their_future_s - previous_path_end_s < closest_gap)){
+                closest_gap = their_future_s - previous_path_end_s;
+                car_id = i;
+            }
+        }
+    }
+    return car_id;
+}
 
 
 /* when driving with maximum acceleration within comfortable level of jerk and acceleration limit

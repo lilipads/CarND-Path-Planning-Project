@@ -89,8 +89,8 @@ json FSM::next_state(const MeasurementPackage &m){
     vector<double> next_x_vals = m.previous_path_x;
     vector<double> next_y_vals = m.previous_path_y;
 
-    // int car_in_front_id = get_car_in_front(previous_path_end_velocity, previous_path_end_s, m);
-    // if (car_in_front_id != -1) {cout << "car in front!" << endl;}
+    int car_in_front_id = get_car_in_front(previous_path_end_velocity, previous_path_end_s, m);
+    if (car_in_front_id != -1) {cout << "car in front!" << endl;}
 
     PlannedPath planned_path = jerk_constrained_spacings(previous_path_end_velocity,
         previous_path_end_acceleration, SPEED_LIMIT,
@@ -99,7 +99,6 @@ json FSM::next_state(const MeasurementPackage &m){
     // cout << "spacings: ";
     // for (int i = 0; i < planned_path.spacings.size(); i++){ cout << planned_path.spacings[i] << ", ";}
     // cout << endl;
-    // test
 
     double x = anchor_x[m.previous_path_x.size() - 1];
     vector<double> map_point;

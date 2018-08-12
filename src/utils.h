@@ -78,7 +78,7 @@ return index of the car in sensor_fusion vector
 find the car closest to me that is in front of me and is in my lane
 return -1 if no car is in front within safe distance
 */
-// int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
+int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
 
 
 // when driving with maximum acceleration within comfortable level of jerk and acceleration limit
