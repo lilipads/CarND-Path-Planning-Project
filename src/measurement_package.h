@@ -5,7 +5,6 @@
 using namespace std;
 
 struct Car {
-  int id;
   double x;
   double y;
   double vx;
