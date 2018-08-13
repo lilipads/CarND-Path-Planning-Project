@@ -26,7 +26,7 @@ const double REACTION_SECONDS = 3; // 3 second rule: must be 3 second away from 
 
 const double WAYPOINT_INTERVAL = 0.02; // second. paths are made up of (x,y) points that the car will visit sequentially every .02 seconds
 const int NUM_WAYPOINTS = 50; // how many way points to generate each time
-const int BUFFER_POINTS = 10; // start changing course of action only after 10 points (0.2 seconds)
+const int BUFFER_POINTS = 10; // start changing course of actions only after 10 points (0.2 seconds)
 
 
 /*
@@ -37,6 +37,9 @@ struct PlannedPath {
     double end_velocity;
     double end_acceleration;
     vector<double> spacings; // distance spacing between every WAYPOINT INTERVAL
+    vector<double> next_x_vals;
+    vector<double> next_y_vals;
+    double cost;
 };
 
 

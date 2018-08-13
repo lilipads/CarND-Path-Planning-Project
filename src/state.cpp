@@ -1,74 +1,190 @@
-#include <vector>
+#include "state.h"
 
-enum StateName = {start, keep_lane, lane_change_left};
+State::State() {}
+StateName State::get_name(){return name;}
+vector<StateName> State::get_next_possible_states(){return next_possible_states;}
 
-class State {
-public:
-	State();
-	virtual State();
-	vector<StateName> next_possible_states;
+StartState::StartState() {
+    name = keep_lane;
+    next_possible_states = {keep_lane};
+}
 
-	trajectory get_trajectory(StateName target_state_name, environment){};
+PlannedPath StartState::get_trajectory(StateName statename, const MeasurementPackage &m){
+    PlannedPath p = get_straight_trajectory(m, 0, 0);
+    return p;
 }
 
 
-class StartState : State{
-public:
-	StartState();
-	next_possible_states = {StateName.keep_lane};
-	trajectory get_trajectory(StateName target_state_name, environment){
-		switch(target_state_name) {
-		    case StateName.keep_lane: 
-		    	// accelerate with expected acceleration
-		    	break;
-		    default:
-		    	throw "invalid state";
-	    }
-	};
+KeepLaneState::KeepLaneState(
+    double s_previous_path_end_velocity, double s_previous_path_end_acceleration) :
+    previous_path_end_velocity(s_previous_path_end_velocity),
+    previous_path_end_acceleration(s_previous_path_end_acceleration) {
+    name = keep_lane;
+    next_possible_states = {keep_lane, lane_change_left};
 }
 
 
-class KeepLaneState : State{
-public:
-	KeepLaneState();
-	next_possible_states = {StateName.keep_lane, StateName.lane_change_left};
-	trajectory get_trajectory(StateName target_state_name, environment){
-		switch(target_state_name) {
-		    case StateName.keep_lane: 
-		    	// if no car in front, accelerate to speed limit, cost 0
-		    	// if car in front, reduce to that car's speed with JMT before safe distance
-		    	break;
-		    case StateName.lane_change_left:
-		    	// if car on the left, do nothing, prohibitive cost
-		    	// else, JMT to target state on the left
-		    	break;
-		    default:
-		    	throw "invalid state";
-		}
-	};
+PlannedPath KeepLaneState::get_trajectory(StateName statename, const MeasurementPackage &m){
+    PlannedPath p;
+    switch(statename) {
+        case keep_lane:
+            p = get_straight_trajectory(m, previous_path_end_velocity,
+                previous_path_end_acceleration);
+            p.cost = 0;
+            if (p.end_acceleration < 0){
+                p.cost = 2;
+            }
+            break;
+        case lane_change_left:
+            p = get_lane_switch_left_trajectory(m);
+            p.cost = 1;
+            break;
+        default:
+            throw "invalid state";
+    }
+    return p;
+}
+
+PlannedPath get_lane_switch_left_trajectory(const MeasurementPackage &m){
+    PlannedPath p;
+    return p;
 }
 
 
-class LaneChangeLeftState : State{
-public:
-	KeepLaneState();
-	next_possible_states = {StateName.lane_change_left, StateName.keep_lane};
-	trajectory get_trajectory(StateName target_state_name, environment){
-		// append a few more points to the end of the trajectory
-		switch(target_state_name) {
-		    case StateName.lane_change_left: 
-		    	// if still in the middle of changing lane, must stick to this state
-		    	break;
-		    case StateName.keep_lane:
-		    	// if finished changing lane, must switch to this state
-		    	break;
-		    default:
-		    	throw "invalid state";
-		}
-	};
-}
+PlannedPath get_straight_trajectory(const MeasurementPackage &m,
+    double previous_path_end_velocity, double previous_path_end_acceleration){
+    
+    cout << "get_straight_trajectory start" << endl;
+    /*
+     * create a spline bsaed on some anchort points (in car coordinates)
+     * anchored on: previous planned path (or if empty, current car position)
+     * and 20 meters out from the last point of the previous path
+     */
+    tk::spline s; 
+
+    vector<double> anchor_x;
+    vector<double> anchor_y;
+
+    vector<double> car_origin = frenet_to_map_coordinates(
+    m.car_s, m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
+    
+    double previous_path_end_s = map_to_frenet_coordinates(m.previous_path_x.back(),
+        m.previous_path_y.back(), m.car_yaw, m.map_waypoints_x, m.map_waypoints_y)[0];
+
+    // starting anchor points: previous planned path. translate it to car coordinates
+    for (int i = 0; i < m.previous_path_x.size(); i++){
+        vector<double> anchor_point = map_to_car_coordinates(
+            m.previous_path_x[i], m.previous_path_y[i], car_origin[0],
+            car_origin[1], m.car_yaw);
+        anchor_x.push_back(anchor_point[0]);
+        anchor_y.push_back(anchor_point[1]);
+    }
+
+    // additional anchor points: extend anchor_point_spacing * 2 meters out from the last planned waypoint 
+    double center_d = get_lane_center(m.car_lane);
+    int anchor_point_spacing = 10;
+
+    for (int i = 1; i < 3; i++){
+        vector<double> anchor_point = frenet_to_car_coordinates(
+            previous_path_end_s + i * anchor_point_spacing, 
+            center_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y,
+            car_origin[0], car_origin[1], m.car_yaw);
+        anchor_x.push_back(anchor_point[0]);
+        anchor_y.push_back(anchor_point[1]);
+    }
+
+    s.set_points(anchor_x, anchor_y);
 
 
-State create_state(StateName name){
-	// TODO
+    /*
+     * read points from created spline
+     * define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+     */
+
+    // only retain the first <BUFFER_POINTS> way points from the previous path
+    vector <double> next_x_vals;
+    vector <double> next_y_vals;
+    for (int i = 0; i < BUFFER_POINTS; i++){
+        next_x_vals.push_back(m.previous_path_x[i]);
+        next_y_vals.push_back(m.previous_path_y[i]);
+    }
+
+    // calculate car state by buffer end time
+    double buffer_end_acceleration = 0.;
+    double buffer_end_speed = m.car_speed;
+
+    if (m.previous_path_x.size() >= 2){
+        double distance2 = sqrt(pow((m.previous_path_x[BUFFER_POINTS] -
+            m.previous_path_x[BUFFER_POINTS - 1]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS] -
+                m.previous_path_y[BUFFER_POINTS - 1]), 2));
+        double distance1 = sqrt(pow((m.previous_path_x[BUFFER_POINTS - 1] -
+            m.previous_path_x[BUFFER_POINTS - 2]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS - 1] -
+                m.previous_path_y[BUFFER_POINTS - 2]), 2));
+        buffer_end_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
+            WAYPOINT_INTERVAL;
+        buffer_end_speed = distance1 / WAYPOINT_INTERVAL;
+    }
+
+    PlannedPath planned_path;
+    int points_to_produce;
+    double starting_x_in_car_coordinates;
+    int car_in_front_id = get_car_in_front(previous_path_end_velocity, previous_path_end_s, m);
+    
+    // if there is no car in front
+    if (car_in_front_id == -1) {
+        // if no car in front and car is not deccelerating, just append onto previously planned waypoints
+        if (buffer_end_acceleration >= 0){
+            next_x_vals = m.previous_path_x;
+            next_y_vals = m.previous_path_y;
+            points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
+            planned_path = jerk_constrained_spacings(previous_path_end_velocity,
+                previous_path_end_acceleration, SPEED_LIMIT,
+                points_to_produce);
+            starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
+        }
+        // if no car in front but car is deccelerating, redo the path beyond buffer
+        else{
+            points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
+            planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, SPEED_LIMIT, points_to_produce);
+            starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
+        }
+    }
+    // if there is car in front, clear previously planned path and reduce to their car's speed
+    else{
+        points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
+
+        // speed of the car in front of us
+        double their_speed = sqrt(m.sensor_fusion[car_in_front_id].vx * 
+            m.sensor_fusion[car_in_front_id].vx + m.sensor_fusion[car_in_front_id].vy *
+            m.sensor_fusion[car_in_front_id].vy);
+
+        planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, their_speed, points_to_produce);
+        starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
+    }
+
+
+    double x = starting_x_in_car_coordinates;
+    vector<double> map_point;
+    for (int i = 0; i < points_to_produce; i++){
+        // calculate angle at spline
+        double delta_x = 5;
+        double tangent_angle = atan2(s(x + delta_x) - s(x), delta_x);
+        x += planned_path.spacings[i] * cos(tangent_angle);
+        map_point = car_to_map_coordinates(x, s(x), car_origin[0],
+            car_origin[1], m.car_yaw);
+        next_x_vals.push_back(map_point[0]);
+        next_y_vals.push_back(map_point[1]);
+    }
+
+    /*
+     * set end state of this planned path
+     */
+    // previous_path_end_velocity = planned_path.end_velocity;
+    // previous_path_end_acceleration = planned_path.end_acceleration;
+    planned_path.next_x_vals = next_x_vals;
+    planned_path.next_y_vals = next_y_vals;
+
+    return planned_path;
 }

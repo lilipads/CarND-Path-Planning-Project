@@ -9,12 +9,13 @@
 #include "spline.h"
 #include "utils.h"
 #include "measurement_package.h"
-// #include "state.h"
+#include "state.h"
 
 using namespace std;
 
 // for convenience
 using json = nlohmann::json;
+
 
 // finite state machine
 class FSM {
@@ -29,18 +30,12 @@ public:
 	*/
 	virtual ~FSM();
 
-	// State current_state = start;
+	State * current_state = new StartState;
 
 	// State get_current_state();
 
     json next_state(const MeasurementPackage &m);
 
-private:
-	// double previous_path_end_x;
-	// double previous_path_end_y;
-	double previous_path_end_velocity = 0;
-	double previous_path_end_acceleration = 0;
-	// double previous_path_end_yaw;
 };
 
 #endif /* FSM_H_ */
