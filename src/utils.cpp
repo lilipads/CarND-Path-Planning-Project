@@ -217,9 +217,15 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
     PlannedPath planned_path;
     double delta_speed_from_zero_acc_to_max_acc = 1. / 2 * EXPECTED_ACCELERATION * EXPECTED_ACCELERATION / EXPECTED_JERK;
 
+    cout << "jerk_constrained_spacings: " << endl;
+    cout << "current_velocity: " << current_velocity << ", " <<
+        "target_velocity: " << target_velocity << endl;
     for (int i = 0; i < n; i++){
         if (target_velocity - current_velocity > delta_speed_from_zero_acc_to_max_acc){
-            if (current_acceleration + EXPECTED_JERK * WAYPOINT_INTERVAL < EXPECTED_ACCELERATION){
+            if (current_acceleration < 0){
+                current_acceleration = 0;
+            }
+            else if (current_acceleration + EXPECTED_JERK * WAYPOINT_INTERVAL < EXPECTED_ACCELERATION){
                 // acceleration with expected jerk
                 current_acceleration += EXPECTED_JERK * WAYPOINT_INTERVAL;
             }
@@ -227,12 +233,23 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
         else if (target_velocity - current_velocity > 0) {
             current_acceleration = std::max(current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL, 0.);
         }
-        else { // exceed speed limit
-            current_acceleration = -EXPECTED_JERK * WAYPOINT_INTERVAL;
+        // exceed speed limit
+        else {
+            if (current_acceleration > 0){
+                current_acceleration = 0;
+            }
+            else if (current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL >
+                - EXPECTED_ACCELERATION){
+                current_acceleration -= EXPECTED_JERK * WAYPOINT_INTERVAL;
+            }
         }
         current_velocity += current_acceleration * WAYPOINT_INTERVAL;
         planned_path.spacings.push_back(current_velocity * WAYPOINT_INTERVAL);
+
+        cout << "current acceleration: " << current_acceleration << ", " 
+        << "current velocity: " << current_velocity << endl;
     }
+
     planned_path.end_acceleration = current_acceleration;
     planned_path.end_velocity = current_velocity;
     return planned_path;

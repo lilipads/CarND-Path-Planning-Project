@@ -7,8 +7,8 @@ using namespace std;
 struct Car {
   double x;
   double y;
-  double vx;
-  double vy;
+  double vx; // meter per second
+  double vy; // meter per second
   double s;
   double d;
 };
@@ -22,7 +22,7 @@ public:
   double car_s;
   double car_d;
   double car_yaw;
-  double car_speed;
+  double car_speed; // in meter / second
   int car_lane; // lane number
 
   // Previous path data given to the Planner

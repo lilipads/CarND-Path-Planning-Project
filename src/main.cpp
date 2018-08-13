@@ -126,7 +126,9 @@ int main() {
                 car.x = j[1]["sensor_fusion"][i][1];
                 car.y = j[1]["sensor_fusion"][i][2];
                 car.vx = j[1]["sensor_fusion"][i][3];
+                car.vx *= MPH_TO_MPS_CONVERSION;
                 car.vy = j[1]["sensor_fusion"][i][4];
+                car.vy *= MPH_TO_MPS_CONVERSION;
                 car.s = j[1]["sensor_fusion"][i][5];
                 car.d = j[1]["sensor_fusion"][i][6];
                 measurement_package.sensor_fusion.push_back(car);

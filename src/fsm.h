@@ -2,6 +2,7 @@
 #define FSM_H_
 #include <math.h>
 #include <vector>
+#include <algorithm>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
