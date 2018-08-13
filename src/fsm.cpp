@@ -82,89 +82,95 @@ json FSM::next_state(const MeasurementPackage &m){
 
     // fit a line to the anchor points
     s.set_points(anchor_x, anchor_y);
-    cout << "car speed (measured): " << m.car_speed << endl;
-    cout << "car_x: " << m.car_x << ", car_y: " << m.car_y << endl;
+    // cout << "car speed (measured): " << m.car_speed << endl;
+    // cout << "car_x: " << m.car_x << ", car_y: " << m.car_y << endl;
 
-    cout << "previous_path_x: ";
-    for (int i = 0; i < m.previous_path_x.size(); i++){ cout << m.previous_path_x[i] << ", ";}
-    cout << endl;
+    // cout << "previous_path_x: ";
+    // for (int i = 0; i < m.previous_path_x.size(); i++){ cout << m.previous_path_x[i] << ", ";}
+    // cout << endl;
 
-    cout << "previous_path_y: ";
-    for (int i = 0; i < m.previous_path_x.size(); i++){ cout << m.previous_path_y[i] << ", ";}
-    cout << endl;
+    // cout << "previous_path_y: ";
+    // for (int i = 0; i < m.previous_path_x.size(); i++){ cout << m.previous_path_y[i] << ", ";}
+    // cout << endl;
 
 
     /*
      * read points from created spline
      * define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
      */
-    vector<double> next_x_vals = m.previous_path_x;
-    vector<double> next_y_vals = m.previous_path_y;
+
+    // only retain the first <BUFFER_POINTS> way points from the previous path
+    vector <double> next_x_vals;
+    vector <double> next_y_vals;
+    for (int i = 0; i < BUFFER_POINTS; i++){
+        next_x_vals.push_back(m.previous_path_x[i]);
+        next_y_vals.push_back(m.previous_path_y[i]);
+    }
+
+    // calculate car state by buffer end time
+    double buffer_end_acceleration = 0.;
+    double buffer_end_speed = m.car_speed;
+
+    if (m.previous_path_x.size() >= 2){
+        double distance2 = sqrt(pow((m.previous_path_x[BUFFER_POINTS] -
+            m.previous_path_x[BUFFER_POINTS - 1]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS] -
+                m.previous_path_y[BUFFER_POINTS - 1]), 2));
+        double distance1 = sqrt(pow((m.previous_path_x[BUFFER_POINTS - 1] -
+            m.previous_path_x[BUFFER_POINTS - 2]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS - 1] -
+                m.previous_path_y[BUFFER_POINTS - 2]), 2));
+        buffer_end_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
+            WAYPOINT_INTERVAL;
+        buffer_end_speed = distance1 / WAYPOINT_INTERVAL;
+    }
 
     PlannedPath planned_path;
     int points_to_produce;
     double starting_x_in_car_coordinates;
     int car_in_front_id = get_car_in_front(previous_path_end_velocity, previous_path_end_s, m);
     
+    // if there is no car in front
     if (car_in_front_id == -1) {
-        cout << "car NOT in front!" << endl;
-        // if no car in front, append onto previously planned waypoints
-        points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
-        planned_path = jerk_constrained_spacings(previous_path_end_velocity,
-            previous_path_end_acceleration, SPEED_LIMIT,
-            points_to_produce);
-        starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
-    }
-    else{
-        // if there is car in front, clear previously planned path and reduce to their car's speed
-        cout << "car in front!" << endl;
-
-        // buffer time: start changing course of action only after 10 points (0.2 seconds)
-        int buffer_points = std::min(10, (int) m.previous_path_x.size()); 
-        points_to_produce = NUM_WAYPOINTS - buffer_points;
-
-        // only retain the first <buffer_points> way points from the previous path
-        next_x_vals = {};
-        next_y_vals = {};
-        for (int i = 0; i < buffer_points; i++){
-            next_x_vals.push_back(m.previous_path_x[i]);
-            next_y_vals.push_back(m.previous_path_y[i]);
+        cout << "car not in front" << endl;
+        // if no car in front and car is not deccelerating, just append onto previously planned waypoints
+        if (buffer_end_acceleration >= 0){
+            next_x_vals = m.previous_path_x;
+            next_y_vals = m.previous_path_y;
+            points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
+            planned_path = jerk_constrained_spacings(previous_path_end_velocity,
+                previous_path_end_acceleration, SPEED_LIMIT,
+                points_to_produce);
+            starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
         }
+        // if no car in front but car is deccelerating, redo the path beyond buffer
+        else{
+            points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
+            planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, SPEED_LIMIT, points_to_produce);
+            starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
+        }
+    }
+    // if there is car in front, clear previously planned path and reduce to their car's speed
+    else{
+        cout << "CAR IN FRONT!!!!!!!!!!!!" << endl;
+
+        points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
 
         // speed of the car in front of us
         double their_speed = sqrt(m.sensor_fusion[car_in_front_id].vx * 
             m.sensor_fusion[car_in_front_id].vx + m.sensor_fusion[car_in_front_id].vy *
             m.sensor_fusion[car_in_front_id].vy);
 
-        double future_acceleration = 0.;
-        double future_speed = m.car_speed;
-
-        if (m.previous_path_x.size() >= 2){
-            double distance2 = sqrt(pow((m.previous_path_x[buffer_points] -
-                m.previous_path_x[buffer_points - 1]), 2) +
-                pow((m.previous_path_y[buffer_points] -
-                    m.previous_path_y[buffer_points - 1]), 2));
-            double distance1 = sqrt(pow((m.previous_path_x[buffer_points - 1] -
-                m.previous_path_x[buffer_points - 2]), 2) +
-                pow((m.previous_path_y[buffer_points - 1] -
-                    m.previous_path_y[buffer_points - 2]), 2));
-            future_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
-                WAYPOINT_INTERVAL;
-            future_speed = distance1 / WAYPOINT_INTERVAL;
-        }
-
-        cout << "future_acceleration: " << future_acceleration << endl;
-        cout << "their speed: " << their_speed << endl;
-        cout << "future speed (calculated): " << future_speed << endl;
-        planned_path = jerk_constrained_spacings(future_speed, future_acceleration, their_speed,
-            points_to_produce);
-
-        starting_x_in_car_coordinates = anchor_x[buffer_points - 1];
+        // cout << "future_acceleration: " << buffer_end_acceleration << endl;
+        // cout << "their speed: " << their_speed << endl;
+        // cout << "future speed (calculated): " << buffer_end_speed << endl;
+        planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, their_speed, points_to_produce);
+        starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
     }
 
-    cout << "spacings: ";
-    for (int i = 0; i < planned_path.spacings.size(); i++){ cout << planned_path.spacings[i] << ", ";}
-    cout << endl;
+    // cout << "spacings: ";
+    // for (int i = 0; i < planned_path.spacings.size(); i++){ cout << planned_path.spacings[i] << ", ";}
+    // cout << endl;
 
     double x = starting_x_in_car_coordinates;
     vector<double> map_point;
@@ -193,8 +199,8 @@ json FSM::next_state(const MeasurementPackage &m){
     json msgJson;
     msgJson["next_x"] = next_x_vals;
     msgJson["next_y"] = next_y_vals;
-    cout << "msgJson: " << msgJson["next_x"] << endl;
-    cout << "msgJson: " << msgJson["next_y"] << endl;
+    // cout << "msgJson: " << msgJson["next_x"] << endl;
+    // cout << "msgJson: " << msgJson["next_y"] << endl;
 
     return msgJson;
 }

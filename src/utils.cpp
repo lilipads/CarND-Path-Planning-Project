@@ -246,8 +246,8 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
         current_velocity += current_acceleration * WAYPOINT_INTERVAL;
         planned_path.spacings.push_back(current_velocity * WAYPOINT_INTERVAL);
 
-        cout << "current acceleration: " << current_acceleration << ", " 
-        << "current velocity: " << current_velocity << endl;
+        // cout << "current acceleration: " << current_acceleration << ", " 
+        // << "current velocity: " << current_velocity << endl;
     }
 
     planned_path.end_acceleration = current_acceleration;
