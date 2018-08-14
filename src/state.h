@@ -38,6 +38,17 @@ private:
 	double previous_path_end_velocity;
 };
 
+class LaneChangeLeft : public State{
+public:
+	LaneChangeLeft();
+	LaneChangeLeft(double s_previous_path_end_velocity, double s_previous_path_end_acceleration);
+	PlannedPath get_trajectory(StateName target_state_name, const MeasurementPackage &m);
+
+private:
+	double previous_path_end_acceleration;
+	double previous_path_end_velocity;
+};
+
 
 /*
 return index of the car in sensor_fusion vector
@@ -53,6 +64,8 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration);
 
-PlannedPath get_lane_switch_left_trajectory(const MeasurementPackage &m);
+PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
+	double previous_path_end_velocity, double previous_path_end_acceleration,
+	int delta_lane);
 
 #endif /* STATE_H_ */

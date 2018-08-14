@@ -217,9 +217,6 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
     PlannedPath planned_path;
     double delta_speed_from_zero_acc_to_max_acc = 1. / 2 * EXPECTED_ACCELERATION * EXPECTED_ACCELERATION / EXPECTED_JERK;
 
-    cout << "jerk_constrained_spacings: " << endl;
-    cout << "current_velocity: " << current_velocity << ", " <<
-        "target_velocity: " << target_velocity << endl;
     for (int i = 0; i < n; i++){
         if (target_velocity - current_velocity > delta_speed_from_zero_acc_to_max_acc){
             if (current_acceleration < 0){

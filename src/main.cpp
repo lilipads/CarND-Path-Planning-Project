@@ -109,16 +109,19 @@ int main() {
             for (auto y : j[1]["previous_path_y"]){
                 measurement_package.previous_path_y.push_back(y);
             }
+
+            // Previous path's end s and d values 
+            measurement_package.end_path_s = j[1]["end_path_s"];
+            measurement_package.end_path_d = j[1]["end_path_d"];
+
             // for convenience of calculation later on, if there is no previous path
             // add the car's current position
             if (measurement_package.previous_path_x.size() == 0){
                 measurement_package.previous_path_x.push_back(measurement_package.car_x);
                 measurement_package.previous_path_y.push_back(measurement_package.car_y);
+                measurement_package.end_path_s = measurement_package.car_s;
+                measurement_package.end_path_d = measurement_package.car_d;
             }
-
-            // Previous path's end s and d values 
-            measurement_package.end_path_s = j[1]["end_path_s"];
-            measurement_package.end_path_d = j[1]["end_path_d"];
             
             // Sensor Fusion Data, a list of all other cars on the same side of the road.
             for (int i = 0; i < j[1]["sensor_fusion"].size(); i++){
