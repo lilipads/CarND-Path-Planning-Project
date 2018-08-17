@@ -61,11 +61,9 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
                 previous_path_end_acceleration, -1);
             p.cost = 1;
             // cannot switch left when already in left most lane
-            // or already in the middle of switching lane
             // or there is car passing on the left, TODO
-            if ((m.car_lane == 0) || (m.car_lane != get_lane(m.end_path_d)) ||
-                (abs(get_lane_center(m.end_path_d) - m.end_path_d) > LANE_WIDTH / 4.)){
-                p.cost = 1;
+            if (m.car_lane == 0){
+                p.cost = 99;
             }
             break;
         default:
@@ -81,10 +79,20 @@ PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const Measuremen
         previous_path_end_acceleration);
     switch(statename) {
         case keep_lane: // finished switching lane
-            p.cost = 1; // TODO
+            if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
+                p.cost = 1;
+            }
+            else{
+                p.cost = 99;
+            }
             break;
         case lane_change_left: // still in the process of lane change (so cannot do another lane change yet)
-            p.cost = 0; // TODO
+            if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
+                p.cost = 99;
+            }
+            else{
+                p.cost = 1;
+            }
             break;
         default:
             throw "invalid state";
