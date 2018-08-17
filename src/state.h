@@ -1,9 +1,12 @@
 #ifndef STATE_H_
 #define STATE_H_
 #include <vector>
+#include <algorithm>
 #include "utils.h"
 #include "measurement_package.h"
 #include "spline.h"
+
+using namespace std;
 
 
 enum StateName {start, keep_lane, lane_change_left};
@@ -57,11 +60,15 @@ return -1 if no car is in front within safe distance
 */
 int get_car_in_front(double previous_path_end_velocity, const MeasurementPackage &m);
 
+State * get_state(StateName state, double end_velocity, double end_acceleration);
 
 // when driving with maximum acceleration within comfortable level of jerk and acceleration limit
 PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
 
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
+	double previous_path_end_velocity, double previous_path_end_acceleration);
+
+PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration);
 
 PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,

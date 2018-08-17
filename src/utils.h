@@ -15,7 +15,7 @@ using namespace std;
 /*
  * define constants
  */
-const double SPEED_LIMIT = 22; // 22 meter / second = 49.2 miles per hour
+const double SPEED_LIMIT = 20; // 22 meter / second = 49.2 miles per hour
 const double MPH_TO_MPS_CONVERSION = 0.44; // 1 mile per hour = 0.44 meter / s
 const double LANE_WIDTH = 4; // meter
 const double MAXIMUM_ACCELERATION = 9; // meter / second ^2
@@ -55,6 +55,7 @@ int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x,
 
 // coordinates transformations
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
+// return vector {frenet_s,frenet_d}
 vector<double> map_to_frenet_coordinates(double x, double y, double theta,
 	const vector<double> &maps_x, const vector<double> &maps_y);
 // Transform from Frenet s,d coordinates to Cartesian x,y
