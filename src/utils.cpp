@@ -187,7 +187,8 @@ vector<double> car_to_map_coordinates(double car_x, double car_y, double car_ori
    return -1 at the end of my previously planned path, there is no car that will be below
    safe following distance in front of me
 */
-int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m){
+int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s,
+    const MeasurementPackage &m){
     int car_id = -1;
     double closest_gap = previous_path_end_velocity * REACTION_SECONDS;  // safe distance
     for (int i = 0; i < m.sensor_fusion.size(); i++){
@@ -227,7 +228,7 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
                 current_acceleration += EXPECTED_JERK * WAYPOINT_INTERVAL;
             }
         }
-        else if (target_velocity - current_velocity > 0) {
+        else if (target_velocity - current_velocity >= 0) {
             current_acceleration = std::max(current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL, 0.);
         }
         // exceed speed limit
@@ -250,4 +251,30 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
     planned_path.end_acceleration = current_acceleration;
     planned_path.end_velocity = current_velocity;
     return planned_path;
+}
+
+
+bool safe_to_switch_lane(int delta_lane, const MeasurementPackage &m){
+    double safe_front_follow_distance = m.car_speed * REACTION_SECONDS;
+    for (int i = 0; i < m.sensor_fusion.size(); i++){
+        int their_lane = get_lane(m.sensor_fusion[i].d);
+        // in the lane I am going to switch into
+        if (their_lane == m.car_lane + delta_lane){
+            // no car within safe following distance in front of me
+            if ((m.sensor_fusion[i].s > m.car_s) &&
+                (m.sensor_fusion[i].s - m.car_s < safe_front_follow_distance)){
+                return false;
+            }
+            double their_speed = sqrt(m.sensor_fusion[i].vx * m.sensor_fusion[i].vx +
+                m.sensor_fusion[i].vy * m.sensor_fusion[i].vy);
+            // no car behind me within safe following distance
+            double safe_back_follow_distance = their_speed * REACTION_SECONDS;
+            if ((m.sensor_fusion[i].s < m.car_s) &&
+                (m.car_s - m.sensor_fusion[i].s < safe_back_follow_distance)){
+                return false;
+            }
+        }
+    }
+    return true;
+
 }

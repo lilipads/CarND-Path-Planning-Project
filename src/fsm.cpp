@@ -24,8 +24,9 @@ json FSM::next_state(const MeasurementPackage &m){
         }
     }
 
-    cout << current_state -> get_name() << endl;
+    // cout << current_state -> get_name() << endl;
 
+    cout << "safe to switch left? " << safe_to_switch_lane(-1, m) << endl;
     // if (new_state_name == lane_change_left){
     //     cout << "switch left!" << endl;
     //     cout << "cost: " << best_p.cost << endl;

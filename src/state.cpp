@@ -52,7 +52,8 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
             p = get_straight_trajectory(m, previous_path_end_velocity,
                 previous_path_end_acceleration);
             p.cost = 0;
-            if (m.car_speed > 10){
+            // change lane when there is more than 10% speed reduction
+            if (1 - previous_path_end_velocity / m.car_speed > 0.1){
                 p.cost = 2;
             }
             break;
@@ -61,8 +62,8 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
                 previous_path_end_acceleration, -1);
             p.cost = 1;
             // cannot switch left when already in left most lane
-            // or there is car passing on the left, TODO
-            if (m.car_lane == 0){
+            // or there is car passing on the left
+            if ((m.car_lane == 0) || (!safe_to_switch_lane(-1, m))){
                 p.cost = 99;
             }
             break;
@@ -125,7 +126,7 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
     }
 
     double center_d = get_lane_center(m.car_lane);
-    int anchor_point_spacing = 15;
+    int anchor_point_spacing = 30;
     double buffer_end_s = map_to_frenet_coordinates(m.previous_path_x[BUFFER_POINTS - 1],
         m.previous_path_y[BUFFER_POINTS - 1], m.car_yaw, m.map_waypoints_x,
         m.map_waypoints_y)[0];
@@ -185,7 +186,7 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
     points_to_produce = NUM_WAYPOINTS * 3; // - BUFFER_POINTS;
     // planned_path = jerk_constrained_spacings(m.car_speed, 0, SPEED_LIMIT, points_to_produce);
     // starting_x_in_car_coordinates = 0;
-    planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, SPEED_LIMIT, points_to_produce);
+    planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, buffer_end_speed, points_to_produce);
     starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
 
     
@@ -282,7 +283,8 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
     PlannedPath planned_path;
     int points_to_produce;
     double starting_x_in_car_coordinates;
-    int car_in_front_id = get_car_in_front(previous_path_end_velocity, m.end_path_s, m);
+    int car_in_front_id = get_car_in_front(previous_path_end_velocity, m.end_path_s, 
+        m);
     
     // if there is no car in front
     if (car_in_front_id == -1) {

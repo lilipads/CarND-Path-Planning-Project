@@ -89,4 +89,7 @@ int get_car_in_front(double previous_path_end_velocity, double previous_path_end
 // when driving with maximum acceleration within comfortable level of jerk and acceleration limit
 PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
 
+// check whether it's safe to switch lane
+bool safe_to_switch_lane(int delta_lane, const MeasurementPackage &m);
+
 #endif /* UTILS_H_ */
