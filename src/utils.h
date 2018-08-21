@@ -18,16 +18,17 @@ using namespace std;
 const double SPEED_LIMIT = 20; // 22 meter / second = 49.2 miles per hour
 const double MPH_TO_MPS_CONVERSION = 0.44; // 1 mile per hour = 0.44 meter / s
 const double LANE_WIDTH = 4; // meter
-const double MAXIMUM_ACCELERATION = 9; // meter / second ^2
+const double MAX_LANE = 2; // max lane number
 const double EXPECTED_ACCELERATION= 2.6; // meter / second ^2
-const double MAX_JERK = 10; // m/s/s/s
 const double EXPECTED_JERK = 2; // m/s/s/s
-const double REACTION_SECONDS = 3; // 3 second rule: must be 3 second away from the car in front
+const double REACTION_SECONDS = 2; // 2 second rule: must be 2 second away from the car in front
 
 const double WAYPOINT_INTERVAL = 0.02; // second. paths are made up of (x,y) points that the car will visit sequentially every .02 seconds
 const int NUM_WAYPOINTS = 50; // how many way points to generate each time
 const int BUFFER_POINTS = 10; // start changing course of actions only after 10 points (0.2 seconds)
-
+const double HIGHEST_COST = 99;
+const double LEFT_LANE_SWITCH_FIXED_COST = 2; // fixed overhead cost for switching lanes
+const double RIGHT_LANE_SWITCH_FIXED_COST = 3; // fixed overhead cost for switching lanes
 
 /*
  * useful struct
@@ -79,17 +80,21 @@ int get_lane(double d);
 double get_lane_center(int lane);
 
 /*
-return index of the car in sensor_fusion vector
-find the car closest to me that is in front of me and is in my lane
+return speed of the car closest to me that is in front of me and is in my lane
 return -1 if no car is in front within safe distance
 */
-int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
+double get_car_in_front_speed(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
 
 
 // when driving with maximum acceleration within comfortable level of jerk and acceleration limit
 PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
 
-// check whether it's safe to switch lane
-bool safe_to_switch_lane(int delta_lane, const MeasurementPackage &m);
+/* return highest cost if it's not safe to switch lane
+ * else, cost is determined by the speed of the car ahead 
+ * in the lane I am about to switch into
+ */
+double get_lane_switch_cost(int delta_lane, const MeasurementPackage &m);
+
+double get_keep_lane_cost(const MeasurementPackage &m);
 
 #endif /* UTILS_H_ */

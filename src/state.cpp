@@ -8,6 +8,9 @@ State * get_state(StateName state, double end_velocity, double end_acceleration)
     else if (state == lane_change_left){
         new_state = new LaneChangeLeft(end_velocity, end_acceleration);
     }
+    else if (state == lane_change_right){
+        new_state = new LaneChangeRight(end_velocity, end_acceleration);
+    }
     return new_state;
 }
 
@@ -27,7 +30,7 @@ KeepLaneState::KeepLaneState(
     previous_path_end_velocity(s_previous_path_end_velocity),
     previous_path_end_acceleration(s_previous_path_end_acceleration) {
     name = keep_lane;
-    next_possible_states = {keep_lane, lane_change_left};
+    next_possible_states = {keep_lane, lane_change_left, lane_change_right};
 }
 
 LaneChangeLeft::LaneChangeLeft(
@@ -36,6 +39,15 @@ LaneChangeLeft::LaneChangeLeft(
     previous_path_end_acceleration(s_previous_path_end_acceleration) {
     name = lane_change_left;
     next_possible_states = {keep_lane, lane_change_left};
+}
+
+
+LaneChangeRight::LaneChangeRight(
+    double s_previous_path_end_velocity, double s_previous_path_end_acceleration) :
+    previous_path_end_velocity(s_previous_path_end_velocity),
+    previous_path_end_acceleration(s_previous_path_end_acceleration) {
+    name = lane_change_right;
+    next_possible_states = {keep_lane, lane_change_right};
 }
 
 
@@ -51,21 +63,35 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
         case keep_lane:
             p = get_straight_trajectory(m, previous_path_end_velocity,
                 previous_path_end_acceleration);
-            p.cost = 0;
-            // change lane when there is more than 10% speed reduction
-            if (1 - previous_path_end_velocity / m.car_speed > 0.1){
-                p.cost = 2;
+            p.cost = get_keep_lane_cost(m);
+            if (p.cost > 0){
+                cout << "keep lane cost: " << p.cost;
             }
             break;
         case lane_change_left:
-            p = get_lane_switch_trajectory(m, previous_path_end_velocity,
-                previous_path_end_acceleration, -1);
-            p.cost = 1;
             // cannot switch left when already in left most lane
-            // or there is car passing on the left
-            if ((m.car_lane == 0) || (!safe_to_switch_lane(-1, m))){
-                p.cost = 99;
+            if (m.car_lane == 0){
+                p.cost = HIGHEST_COST;
+                break;
             }
+            else{
+                p = get_lane_switch_trajectory(m, previous_path_end_velocity,
+                previous_path_end_acceleration, -1);
+                p.cost = get_lane_switch_cost(-1, m);
+            }
+            cout <<" switch left cost: " << p.cost;
+            break;
+        case lane_change_right:
+            // cannot switch right when already in right most lane
+            if (m.car_lane == MAX_LANE){
+                p.cost = HIGHEST_COST;
+            }
+            else{
+                p = get_lane_switch_trajectory(m, previous_path_end_velocity,
+                previous_path_end_acceleration, 1);
+                p.cost = get_lane_switch_cost(1, m);
+            }
+            cout <<" switch right cost: " << p.cost << endl;
             break;
         default:
             throw "invalid state";
@@ -81,18 +107,46 @@ PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const Measuremen
     switch(statename) {
         case keep_lane: // finished switching lane
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
-                p.cost = 1;
+                p.cost = -1;
             }
             else{
-                p.cost = 99;
+                p.cost = HIGHEST_COST;
             }
             break;
         case lane_change_left: // still in the process of lane change (so cannot do another lane change yet)
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
-                p.cost = 99;
+                p.cost = HIGHEST_COST;
             }
             else{
-                p.cost = 1;
+                p.cost = -1;
+            }
+            break;
+        default:
+            throw "invalid state";
+    }
+    return p;
+}
+
+
+PlannedPath LaneChangeRight::get_trajectory(StateName statename, const MeasurementPackage &m){
+    PlannedPath p;
+    p = extend_straight_trajectory(m, previous_path_end_velocity,
+        previous_path_end_acceleration);
+    switch(statename) {
+        case keep_lane: // finished switching lane
+            if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
+                p.cost = -1;
+            }
+            else{
+                p.cost = HIGHEST_COST;
+            }
+            break;
+        case lane_change_right: // still in the process of lane change (so cannot do another lane change yet)
+            if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
+                p.cost = HIGHEST_COST;
+            }
+            else{
+                p.cost = -1;
             }
             break;
         default:
@@ -133,7 +187,7 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
 
     // first point is straight ahead 10 meters
     // next two anchor points is 20 meters and 30 meters ahead in the target lane
-    for (int i = 1; i < 4; i++){
+    for (int i = 1; i < 5; i++){
         if (i > 1){
             center_d = get_lane_center(m.car_lane + delta_lane);
         }
@@ -183,7 +237,7 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
     int points_to_produce;
     double starting_x_in_car_coordinates;
     
-    points_to_produce = NUM_WAYPOINTS * 3; // - BUFFER_POINTS;
+    points_to_produce = NUM_WAYPOINTS * 4; // - BUFFER_POINTS;
     // planned_path = jerk_constrained_spacings(m.car_speed, 0, SPEED_LIMIT, points_to_produce);
     // starting_x_in_car_coordinates = 0;
     planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, buffer_end_speed, points_to_produce);
@@ -283,11 +337,11 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
     PlannedPath planned_path;
     int points_to_produce;
     double starting_x_in_car_coordinates;
-    int car_in_front_id = get_car_in_front(previous_path_end_velocity, m.end_path_s, 
+    double car_in_front_speed = get_car_in_front_speed(previous_path_end_velocity, m.end_path_s, 
         m);
     
     // if there is no car in front
-    if (car_in_front_id == -1) {
+    if (car_in_front_speed < 0) {
         // if no car in front and car is not deccelerating, just append onto previously planned waypoints
         if (buffer_end_acceleration >= 0){
             next_x_vals = m.previous_path_x;
@@ -309,12 +363,8 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
     else{
         points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
 
-        // speed of the car in front of us
-        double their_speed = sqrt(m.sensor_fusion[car_in_front_id].vx * 
-            m.sensor_fusion[car_in_front_id].vx + m.sensor_fusion[car_in_front_id].vy *
-            m.sensor_fusion[car_in_front_id].vy);
-
-        planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, their_speed, points_to_produce);
+        planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration,
+            car_in_front_speed, points_to_produce);
         starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
     }
 

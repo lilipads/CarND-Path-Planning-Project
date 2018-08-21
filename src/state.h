@@ -9,7 +9,7 @@
 using namespace std;
 
 
-enum StateName {start, keep_lane, lane_change_left};
+enum StateName {start, keep_lane, lane_change_left, lane_change_right};
 
 class State {
 public:
@@ -53,12 +53,17 @@ private:
 };
 
 
-/*
-return index of the car in sensor_fusion vector
-find the car closest to me that is in front of me and is in my lane
-return -1 if no car is in front within safe distance
-*/
-int get_car_in_front(double previous_path_end_velocity, const MeasurementPackage &m);
+class LaneChangeRight : public State{
+public:
+	LaneChangeRight();
+	LaneChangeRight(double s_previous_path_end_velocity, double s_previous_path_end_acceleration);
+	PlannedPath get_trajectory(StateName target_state_name, const MeasurementPackage &m);
+
+private:
+	double previous_path_end_acceleration;
+	double previous_path_end_velocity;
+};
+
 
 State * get_state(StateName state, double end_velocity, double end_acceleration);
 

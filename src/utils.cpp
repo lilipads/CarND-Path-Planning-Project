@@ -187,9 +187,9 @@ vector<double> car_to_map_coordinates(double car_x, double car_y, double car_ori
    return -1 at the end of my previously planned path, there is no car that will be below
    safe following distance in front of me
 */
-int get_car_in_front(double previous_path_end_velocity, double previous_path_end_s,
+double get_car_in_front_speed(double previous_path_end_velocity, double previous_path_end_s,
     const MeasurementPackage &m){
-    int car_id = -1;
+    double speed = -1;
     double closest_gap = previous_path_end_velocity * REACTION_SECONDS;  // safe distance
     for (int i = 0; i < m.sensor_fusion.size(); i++){
         int their_lane = get_lane(m.sensor_fusion[i].d);
@@ -202,11 +202,11 @@ int get_car_in_front(double previous_path_end_velocity, double previous_path_end
             // currently in front me, and in the future will be too close
             if ((m.sensor_fusion[i].s > m.car_s) && (their_future_s - previous_path_end_s < closest_gap)){
                 closest_gap = their_future_s - previous_path_end_s;
-                car_id = i;
+                speed = their_speed;
             }
         }
     }
-    return car_id;
+    return speed;
 }
 
 
@@ -221,24 +221,29 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
     for (int i = 0; i < n; i++){
         if (target_velocity - current_velocity > delta_speed_from_zero_acc_to_max_acc){
             if (current_acceleration < 0){
+                cout << "acc" << endl;
                 current_acceleration = 0;
             }
-            else if (current_acceleration + EXPECTED_JERK * WAYPOINT_INTERVAL < EXPECTED_ACCELERATION){
+            else{
+                cout << "increment acc" << endl;
                 // acceleration with expected jerk
-                current_acceleration += EXPECTED_JERK * WAYPOINT_INTERVAL;
+                current_acceleration += std::min(EXPECTED_ACCELERATION - current_acceleration,
+                    EXPECTED_JERK * WAYPOINT_INTERVAL);
             }
         }
+        // approaching target velocity, slow down acceleration
         else if (target_velocity - current_velocity >= 0) {
             current_acceleration = std::max(current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL, 0.);
         }
         // exceed speed limit
         else {
             if (current_acceleration > 0){
+                cout << "decc" << endl;
                 current_acceleration = 0;
             }
-            else if (current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL >
-                - EXPECTED_ACCELERATION){
-                current_acceleration -= EXPECTED_JERK * WAYPOINT_INTERVAL;
+            else {
+                current_acceleration -= std::min(EXPECTED_ACCELERATION + current_acceleration,
+                    EXPECTED_JERK * WAYPOINT_INTERVAL);
             }
         }
         current_velocity += current_acceleration * WAYPOINT_INTERVAL;
@@ -254,27 +259,61 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
 }
 
 
-bool safe_to_switch_lane(int delta_lane, const MeasurementPackage &m){
+/* return highest cost if it's not safe to switch lane
+ * else, cost is determined by the speed of the car ahead 
+ * in the lane I am about to switch into
+ */
+double get_lane_switch_cost(int delta_lane, const MeasurementPackage &m){
     double safe_front_follow_distance = m.car_speed * REACTION_SECONDS;
+    double closest_gap = -1;
+    double fixed_cost = (
+        delta_lane < -1)? LEFT_LANE_SWITCH_FIXED_COST : RIGHT_LANE_SWITCH_FIXED_COST;
+    double cost = fixed_cost;
     for (int i = 0; i < m.sensor_fusion.size(); i++){
         int their_lane = get_lane(m.sensor_fusion[i].d);
         // in the lane I am going to switch into
         if (their_lane == m.car_lane + delta_lane){
-            // no car within safe following distance in front of me
-            if ((m.sensor_fusion[i].s > m.car_s) &&
-                (m.sensor_fusion[i].s - m.car_s < safe_front_follow_distance)){
-                return false;
-            }
+
             double their_speed = sqrt(m.sensor_fusion[i].vx * m.sensor_fusion[i].vx +
                 m.sensor_fusion[i].vy * m.sensor_fusion[i].vy);
+
+            // no car within safe following distance in front of me
+            if (m.sensor_fusion[i].s > m.car_s){
+                if (m.sensor_fusion[i].s - m.car_s < safe_front_follow_distance){
+                    return HIGHEST_COST;
+                }
+                else{
+                    if ((closest_gap < 0) || (m.sensor_fusion[i].s - m.car_s < closest_gap)){
+                        closest_gap = m.sensor_fusion[i].s - m.car_s;
+                        cost = SPEED_LIMIT - their_speed + fixed_cost;
+                    }
+                }
+            }
+
             // no car behind me within safe following distance
             double safe_back_follow_distance = their_speed * REACTION_SECONDS;
             if ((m.sensor_fusion[i].s < m.car_s) &&
                 (m.car_s - m.sensor_fusion[i].s < safe_back_follow_distance)){
-                return false;
+                return HIGHEST_COST;
             }
         }
     }
-    return true;
+    return cost;
 
+}
+
+
+/* return no cost if there is no car in front
+ * else cost is determined by the speed of the car in front of me
+ */  
+double get_keep_lane_cost(const MeasurementPackage &m){
+    double car_in_front_speed = get_car_in_front_speed(SPEED_LIMIT,
+        m.car_s + NUM_WAYPOINTS * WAYPOINT_INTERVAL * SPEED_LIMIT, m);
+    // default: no car in front, then stay in lane
+    double cost = -1;
+
+    if (car_in_front_speed > 0){
+        cost = SPEED_LIMIT - car_in_front_speed;
+    }
+    return cost;
 }
