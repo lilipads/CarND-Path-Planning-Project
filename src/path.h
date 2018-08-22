@@ -23,15 +23,6 @@ struct PlannedPath {
     double cost;
 };
 
-
-
-// when driving with maximum acceleration within comfortable level of jerk and acceleration limit
-PlannedPath jerk_constrained_spacings(double current_velocity, 
-	double current_acceleration, double target_velocity, int n);
-
-// when driving with maximum acceleration within comfortable level of jerk and acceleration limit
-PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
-
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration,
 	double speed_limit);
@@ -44,5 +35,21 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration,
 	int delta_lane, double speed_limit);
 
+
+/* helper functions */
+
+// when driving with maximum acceleration within comfortable level of jerk and acceleration limit
+PlannedPath _jerk_constrained_spacings(double current_velocity, 
+	double current_acceleration, double target_velocity, int n);
+
+// fill in the next_x_vals and next_y_vals for the planned path 
+void _get_trajectory(vector<double> anchor_x, vector<double> anchor_y,
+	double starting_x_in_car_coordinates, PlannedPath & planned_path,
+	int points_to_produce, const MeasurementPackage &m);
+
+// anchor points for spline
+void _get_anchor_points(bool append_to_current_path, vector<double> & anchor_x,
+	vector<double> & anchor_y, vector<double> anchor_points_in_d, const MeasurementPackage &m,
+	double anchor_point_spacing);
 
 #endif /* UTILS_H_ */

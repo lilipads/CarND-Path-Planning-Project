@@ -18,8 +18,8 @@ const double SPEED_LIMIT = 20; // 22 meter / second = 49.2 miles per hour
 const double MPH_TO_MPS_CONVERSION = 0.44; // 1 mile per hour = 0.44 meter / s
 const double LANE_WIDTH = 4; // meter
 const double MAX_LANE = 2; // max lane number
-const double EXPECTED_ACCELERATION = 2.6; // meter / second ^2
-const double EXPECTED_JERK = 2; // m/s/s/s
+const double MAX_ACCELERATION = 2.6; // meter / second ^2
+const double MAX_JERK = 2; // m/s/s/s
 const double REACTION_SECONDS = 1; // must be 1 second away from the car in front
 
 const double WAYPOINT_INTERVAL = 0.02; // second. paths are made up of (x,y) points that the car will visit sequentially every .02 seconds
