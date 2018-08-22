@@ -1,15 +1,16 @@
 #include "state.h"
 
-State * get_state(StateName state, double end_velocity, double end_acceleration){
+State * get_state(StateName state, double end_velocity, double end_acceleration,
+    double speed_limit){
     State * new_state;
     if (state == keep_lane){
-        new_state = new KeepLaneState(end_velocity, end_acceleration);
+        new_state = new KeepLaneState(end_velocity, end_acceleration, speed_limit);
     }
     else if (state == lane_change_left){
-        new_state = new LaneChangeLeft(end_velocity, end_acceleration);
+        new_state = new LaneChangeLeft(end_velocity, end_acceleration, speed_limit);
     }
     else if (state == lane_change_right){
-        new_state = new LaneChangeRight(end_velocity, end_acceleration);
+        new_state = new LaneChangeRight(end_velocity, end_acceleration, speed_limit);
     }
     return new_state;
 }
@@ -26,33 +27,39 @@ StartState::StartState() {
 
 
 KeepLaneState::KeepLaneState(
-    double s_previous_path_end_velocity, double s_previous_path_end_acceleration) :
+    double s_previous_path_end_velocity, double s_previous_path_end_acceleration,
+    double s_speed_limit) :
     previous_path_end_velocity(s_previous_path_end_velocity),
-    previous_path_end_acceleration(s_previous_path_end_acceleration) {
+    previous_path_end_acceleration(s_previous_path_end_acceleration),
+    speed_limit(s_speed_limit) {
     name = keep_lane;
     next_possible_states = {keep_lane, lane_change_left, lane_change_right};
 }
 
 LaneChangeLeft::LaneChangeLeft(
-    double s_previous_path_end_velocity, double s_previous_path_end_acceleration) :
+    double s_previous_path_end_velocity, double s_previous_path_end_acceleration,
+    double s_speed_limit) :
     previous_path_end_velocity(s_previous_path_end_velocity),
-    previous_path_end_acceleration(s_previous_path_end_acceleration) {
+    previous_path_end_acceleration(s_previous_path_end_acceleration),
+    speed_limit(s_speed_limit) {
     name = lane_change_left;
     next_possible_states = {keep_lane, lane_change_left};
 }
 
 
 LaneChangeRight::LaneChangeRight(
-    double s_previous_path_end_velocity, double s_previous_path_end_acceleration) :
+    double s_previous_path_end_velocity, double s_previous_path_end_acceleration,
+    double s_speed_limit) :
     previous_path_end_velocity(s_previous_path_end_velocity),
-    previous_path_end_acceleration(s_previous_path_end_acceleration) {
+    previous_path_end_acceleration(s_previous_path_end_acceleration),
+    speed_limit(s_speed_limit) {
     name = lane_change_right;
     next_possible_states = {keep_lane, lane_change_right};
 }
 
 
 PlannedPath StartState::get_trajectory(StateName statename, const MeasurementPackage &m){
-    PlannedPath p = get_straight_trajectory(m, 0, 0);
+    PlannedPath p = get_straight_trajectory(m, 0, 0, SPEED_LIMIT);
     return p;
 }
 
@@ -62,7 +69,7 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
     switch(statename) {
         case keep_lane:
             p = get_straight_trajectory(m, previous_path_end_velocity,
-                previous_path_end_acceleration);
+                previous_path_end_acceleration, speed_limit);
             p.cost = get_keep_lane_cost(m);
             if (p.cost > 0){
                 cout << "keep lane cost: " << p.cost;
@@ -76,7 +83,7 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
             }
             else{
                 p = get_lane_switch_trajectory(m, previous_path_end_velocity,
-                previous_path_end_acceleration, -1);
+                previous_path_end_acceleration, -1, speed_limit);
                 p.cost = get_lane_switch_cost(-1, m);
             }
             cout <<" switch left cost: " << p.cost;
@@ -88,7 +95,7 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
             }
             else{
                 p = get_lane_switch_trajectory(m, previous_path_end_velocity,
-                previous_path_end_acceleration, 1);
+                previous_path_end_acceleration, 1, speed_limit);
                 p.cost = get_lane_switch_cost(1, m);
             }
             cout <<" switch right cost: " << p.cost << endl;
@@ -103,7 +110,7 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
 PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const MeasurementPackage &m){
     PlannedPath p;
     p = extend_straight_trajectory(m, previous_path_end_velocity,
-        previous_path_end_acceleration);
+        previous_path_end_acceleration, speed_limit);
     switch(statename) {
         case keep_lane: // finished switching lane
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
@@ -131,7 +138,7 @@ PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const Measuremen
 PlannedPath LaneChangeRight::get_trajectory(StateName statename, const MeasurementPackage &m){
     PlannedPath p;
     p = extend_straight_trajectory(m, previous_path_end_velocity,
-        previous_path_end_acceleration);
+        previous_path_end_acceleration, speed_limit);
     switch(statename) {
         case keep_lane: // finished switching lane
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
@@ -158,7 +165,7 @@ PlannedPath LaneChangeRight::get_trajectory(StateName statename, const Measureme
 
 PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
     double previous_path_end_velocity, double previous_path_end_acceleration,
-    int delta_lane){
+    int delta_lane, double speed_limit){
     /*
      * create a spline bsaed on some anchort points (in car coordinates)
      * anchored on: previous planned path (or if empty, current car position)
@@ -267,7 +274,8 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
 
 
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
-    double previous_path_end_velocity, double previous_path_end_acceleration){
+    double previous_path_end_velocity, double previous_path_end_acceleration,
+    double speed_limit){
 
     /*
      * create a spline bsaed on some anchort points (in car coordinates)
@@ -348,14 +356,14 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
             next_y_vals = m.previous_path_y;
             points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
             planned_path = jerk_constrained_spacings(previous_path_end_velocity,
-                previous_path_end_acceleration, SPEED_LIMIT,
+                previous_path_end_acceleration, speed_limit,
                 points_to_produce);
             starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
         }
         // if no car in front but car is deccelerating, redo the path beyond buffer
         else{
             points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
-            planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, SPEED_LIMIT, points_to_produce);
+            planned_path = jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, speed_limit, points_to_produce);
             starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
         }
     }
@@ -392,7 +400,8 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
 
 
 PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
-    double previous_path_end_velocity, double previous_path_end_acceleration){
+    double previous_path_end_velocity, double previous_path_end_acceleration,
+    double speed_limit){
 
     /*
      * create a spline bsaed on some anchort points (in car coordinates)
@@ -446,7 +455,7 @@ PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
     next_y_vals = m.previous_path_y;
     points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
     planned_path = jerk_constrained_spacings(previous_path_end_velocity,
-        previous_path_end_acceleration, SPEED_LIMIT,
+        previous_path_end_acceleration, speed_limit,
         points_to_produce);
     starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
 

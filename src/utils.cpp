@@ -221,11 +221,11 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
     for (int i = 0; i < n; i++){
         if (target_velocity - current_velocity > delta_speed_from_zero_acc_to_max_acc){
             if (current_acceleration < 0){
-                cout << "acc" << endl;
+                // cout << "acc" << endl;
                 current_acceleration = 0;
             }
             else{
-                cout << "increment acc" << endl;
+                // cout << "increment acc" << endl;
                 // acceleration with expected jerk
                 current_acceleration += std::min(EXPECTED_ACCELERATION - current_acceleration,
                     EXPECTED_JERK * WAYPOINT_INTERVAL);
@@ -238,7 +238,7 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
         // exceed speed limit
         else {
             if (current_acceleration > 0){
-                cout << "decc" << endl;
+                // cout << "decc" << endl;
                 current_acceleration = 0;
             }
             else {
@@ -316,4 +316,32 @@ double get_keep_lane_cost(const MeasurementPackage &m){
         cost = SPEED_LIMIT - car_in_front_speed;
     }
     return cost;
+}
+
+
+/*
+ * reduce speed limit at road segment with high curvature
+ * because otherwise the centripetal acceleration can be too high
+ */ 
+double get_speed_limit(const MeasurementPackage &m){
+    double spacing = 10;
+    vector<double> anchor_point0 = frenet_to_map_coordinates(
+        m.car_s + spacing, 
+        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
+    vector<double> anchor_point1 = frenet_to_map_coordinates(
+        m.car_s + spacing, 
+        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
+    vector<double> anchor_point2 = frenet_to_map_coordinates(
+        m.car_s + spacing * 2, 
+        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
+    double dist0 = sqrt((anchor_point1[0] - anchor_point0[0]) * 
+        (anchor_point1[0] - anchor_point0[0]) + (anchor_point1[1] - anchor_point0[1]) * 
+        (anchor_point1[1] - anchor_point0[1]));
+    double dist1 = sqrt((anchor_point1[0] - anchor_point2[0]) * 
+        (anchor_point1[0] - anchor_point2[0]) + (anchor_point1[1] - anchor_point2[1]) * 
+        (anchor_point1[1] - anchor_point2[1]));
+    double speed_limit = SPEED_LIMIT - std::min(std::max(1 - std::min(dist0, dist1) / spacing,
+        0.) * 50., 5.);
+    cout << "speed_limit: " << speed_limit << endl;
+    return speed_limit;
 }

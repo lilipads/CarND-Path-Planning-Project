@@ -7,7 +7,6 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
-#include "spline.h"
 #include "measurement_package.h"
 
 using namespace std;
@@ -21,7 +20,7 @@ const double LANE_WIDTH = 4; // meter
 const double MAX_LANE = 2; // max lane number
 const double EXPECTED_ACCELERATION= 2.6; // meter / second ^2
 const double EXPECTED_JERK = 2; // m/s/s/s
-const double REACTION_SECONDS = 2; // 2 second rule: must be 2 second away from the car in front
+const double REACTION_SECONDS = 1; // must be 1 second away from the car in front
 
 const double WAYPOINT_INTERVAL = 0.02; // second. paths are made up of (x,y) points that the car will visit sequentially every .02 seconds
 const int NUM_WAYPOINTS = 50; // how many way points to generate each time
@@ -96,5 +95,11 @@ PlannedPath jerk_constrained_spacings(double current_velocity, double current_ac
 double get_lane_switch_cost(int delta_lane, const MeasurementPackage &m);
 
 double get_keep_lane_cost(const MeasurementPackage &m);
+
+/*
+ * reduce speed limit at road segment with high curvature
+ * because otherwise the centripetal acceleration can be too high
+ */ 
+double get_speed_limit(const MeasurementPackage &m);
 
 #endif /* UTILS_H_ */

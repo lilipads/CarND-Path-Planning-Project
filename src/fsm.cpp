@@ -13,15 +13,18 @@ json FSM::next_state(const MeasurementPackage &m){
     PlannedPath best_p;
     StateName new_state_name;
 
+    double speed_limit = get_speed_limit(m);
+
     // find the state with minimum cost
     for (StateName target_state : current_state -> get_next_possible_states()){
         PlannedPath p = current_state -> get_trajectory(target_state, m);
         if (p.cost < min_cost){
             best_p = p;
-            next_state = get_state(target_state, p.end_velocity, p.end_acceleration);
+            next_state = get_state(target_state, p.end_velocity, p.end_acceleration, speed_limit);
             min_cost = p.cost;
             new_state_name = target_state;
         }
+        // already found optimal path, no need to explore other states
         if (p.cost < 0){
             break;
         }

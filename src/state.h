@@ -33,51 +33,60 @@ public:
 class KeepLaneState : public State{
 public:
 	KeepLaneState();
-	KeepLaneState(double s_previous_path_end_velocity, double s_previous_path_end_acceleration);
+	KeepLaneState(double s_previous_path_end_velocity,
+		double s_previous_path_end_acceleration, double s_speed_limit);
 	PlannedPath get_trajectory(StateName target_state_name, const MeasurementPackage &m);
 
 private:
 	double previous_path_end_acceleration;
 	double previous_path_end_velocity;
+	double speed_limit;
 };
 
 class LaneChangeLeft : public State{
 public:
 	LaneChangeLeft();
-	LaneChangeLeft(double s_previous_path_end_velocity, double s_previous_path_end_acceleration);
+	LaneChangeLeft(double s_previous_path_end_velocity,
+		double s_previous_path_end_acceleration, double s_speed_limit);
 	PlannedPath get_trajectory(StateName target_state_name, const MeasurementPackage &m);
 
 private:
 	double previous_path_end_acceleration;
 	double previous_path_end_velocity;
+	double speed_limit;
 };
 
 
 class LaneChangeRight : public State{
 public:
 	LaneChangeRight();
-	LaneChangeRight(double s_previous_path_end_velocity, double s_previous_path_end_acceleration);
+	LaneChangeRight(double s_previous_path_end_velocity,
+		double s_previous_path_end_acceleration, double s_speed_limit);
 	PlannedPath get_trajectory(StateName target_state_name, const MeasurementPackage &m);
 
 private:
 	double previous_path_end_acceleration;
 	double previous_path_end_velocity;
+	double speed_limit;
 };
 
 
-State * get_state(StateName state, double end_velocity, double end_acceleration);
+State * get_state(StateName state, double end_velocity, double end_acceleration,
+	double speed_limit);
 
 // when driving with maximum acceleration within comfortable level of jerk and acceleration limit
 PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
 
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration);
+	double previous_path_end_velocity, double previous_path_end_acceleration,
+	double speed_limit);
 
 PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration);
+	double previous_path_end_velocity, double previous_path_end_acceleration,
+	double speed_limit);
 
 PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration,
-	int delta_lane);
+	int delta_lane, double speed_limit);
 
 #endif /* STATE_H_ */
