@@ -23,13 +23,25 @@ struct PlannedPath {
     double cost;
 };
 
+/*
+ * waypoints when driving straight
+ * the trajectory knows to slow down when there is car ahead and speed up when necessary
+
+ - bool extend_trajectory: when set to true, force the planning to continue with
+ 	previously planned way points, and only add new way points in the end
+ */ 
 PlannedPath get_straight_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration,
-	double speed_limit);
+	double speed_limit, bool extend_trajectory);
 
-PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration,
-	double speed_limit);
+
+/*
+ * waypoints when switching lanes
+ * the trajectory does NOT check whether it's safe to switch lane
+ * (that's the job of the cost function)
+
+ - int delta_lane: -1 when switching one lane to the left, and +1 when right
+ */ 
 
 PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
 	double previous_path_end_velocity, double previous_path_end_acceleration,

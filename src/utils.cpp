@@ -293,7 +293,6 @@ double get_speed_limit(const MeasurementPackage &m){
 
     // check for maximum curvature (i.e. min cartesian distance) in all the segments
     for (int i = 1; i < segments; i++){
-        cout << i;
         double dist = sqrt((anchor_points[i][0] - anchor_points[i - 1][0]) * 
             (anchor_points[i][0] - anchor_points[i - 1][0]) +
             (anchor_points[i][1] - anchor_points[i - 1][1]) * 

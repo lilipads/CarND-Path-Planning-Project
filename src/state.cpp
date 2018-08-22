@@ -59,7 +59,7 @@ LaneChangeRight::LaneChangeRight(
 
 
 PlannedPath StartState::get_trajectory(StateName statename, const MeasurementPackage &m){
-    PlannedPath p = get_straight_trajectory(m, 0, 0, SPEED_LIMIT);
+    PlannedPath p = get_straight_trajectory(m, 0, 0, SPEED_LIMIT, false);
     return p;
 }
 
@@ -69,7 +69,7 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
     switch(statename) {
         case keep_lane:
             p = get_straight_trajectory(m, previous_path_end_velocity,
-                previous_path_end_acceleration, speed_limit);
+                previous_path_end_acceleration, speed_limit, false);
             p.cost = get_keep_lane_cost(m);
             if (p.cost > 0){
                 cout << "keep lane cost: " << p.cost;
@@ -109,10 +109,15 @@ PlannedPath KeepLaneState::get_trajectory(StateName statename, const Measurement
 
 PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const MeasurementPackage &m){
     PlannedPath p;
-    p = extend_straight_trajectory(m, previous_path_end_velocity,
-        previous_path_end_acceleration, speed_limit);
+    p = get_straight_trajectory(m, previous_path_end_velocity,
+        previous_path_end_acceleration, speed_limit, true);
+
+    // if car is already near the center of the target lane, we consider it has finshed the lane
+    // switch and thus force it to transtion to keep_lane state (by giving it a low cost).
+    // otherwise, stay in lane change state (so it cannot do another lane change yet)
     switch(statename) {
-        case keep_lane: // finished switching lane
+        // finished switching lane
+        case keep_lane: 
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
                 p.cost = -1;
             }
@@ -120,7 +125,8 @@ PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const Measuremen
                 p.cost = HIGHEST_COST;
             }
             break;
-        case lane_change_left: // still in the process of lane change (so cannot do another lane change yet)
+        // still in the process of lane change 
+        case lane_change_left:
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
                 p.cost = HIGHEST_COST;
             }
@@ -137,10 +143,15 @@ PlannedPath LaneChangeLeft::get_trajectory(StateName statename, const Measuremen
 
 PlannedPath LaneChangeRight::get_trajectory(StateName statename, const MeasurementPackage &m){
     PlannedPath p;
-    p = extend_straight_trajectory(m, previous_path_end_velocity,
-        previous_path_end_acceleration, speed_limit);
+    p = get_straight_trajectory(m, previous_path_end_velocity,
+        previous_path_end_acceleration, speed_limit, true);
+
+    // if car is already near the center of the target lane, we consider it has finshed the lane
+    // switch and thus force it to transtion to keep_lane state (by giving it a low cost).
+    // otherwise, stay in lane change state (so it cannot do another lane change yet)
     switch(statename) {
-        case keep_lane: // finished switching lane
+        // finished switching lane
+        case keep_lane: 
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
                 p.cost = -1;
             }
@@ -148,7 +159,8 @@ PlannedPath LaneChangeRight::get_trajectory(StateName statename, const Measureme
                 p.cost = HIGHEST_COST;
             }
             break;
-        case lane_change_right: // still in the process of lane change (so cannot do another lane change yet)
+        // still in the process of lane change
+        case lane_change_right:
             if (abs(m.car_d - m.end_path_d) < LANE_WIDTH / 10.){
                 p.cost = HIGHEST_COST;
             }

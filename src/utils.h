@@ -65,6 +65,10 @@ vector<double> car_to_map_coordinates(double car_x, double car_y, double car_ori
 	double car_origin_y, double yaw);
 
 
+/*
+ * other helper functions
+ */
+
 // return lane number
 int get_lane(double d);
 // return d (frenet coordinate) for lane center
@@ -76,6 +80,11 @@ return -1 if no car is in front within safe distance
 */
 double get_car_in_front_speed(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
 
+/*
+ * reduce speed limit at road segment with high curvature
+ * because otherwise the centripetal acceleration can be too high
+ */ 
+double get_speed_limit(const MeasurementPackage &m);
 
 /* return highest cost if it's not safe to switch lane
  * else, cost is determined by the speed of the car ahead 
@@ -85,10 +94,5 @@ double get_lane_switch_cost(int delta_lane, const MeasurementPackage &m);
 
 double get_keep_lane_cost(const MeasurementPackage &m);
 
-/*
- * reduce speed limit at road segment with high curvature
- * because otherwise the centripetal acceleration can be too high
- */ 
-double get_speed_limit(const MeasurementPackage &m);
 
 #endif /* UTILS_H_ */
