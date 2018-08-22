@@ -1,139 +1,44 @@
 # CarND-Path-Planning-Project
-   
-### Simulator.
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
-
-### Goals
-In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
-
-#### The map of the highway is in data/highway_map.txt
-Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
-
-The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
-
-## Basic Build Instructions
-
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./path_planning`.
-
-Here is the data provided from the Simulator to the C++ Program
-
-#### Main car's localization Data (No Noise)
-
-["x"] The car's x position in map coordinates
-
-["y"] The car's y position in map coordinates
-
-["s"] The car's s position in frenet coordinates
-
-["d"] The car's d position in frenet coordinates
-
-["yaw"] The car's yaw angle in the map
-
-["speed"] The car's speed in MPH
-
-#### Previous path data given to the Planner
-
-//Note: Return the previous list but with processed points removed, can be a nice tool to show how far along
-the path has processed since last time. 
-
-["previous_path_x"] The previous list of x points previously given to the simulator
-
-["previous_path_y"] The previous list of y points previously given to the simulator
-
-#### Previous path's end s and d values 
-
-["end_path_s"] The previous list's last point's frenet s value
-
-["end_path_d"] The previous list's last point's frenet d value
-
-#### Sensor Fusion Data, a list of all other car's attributes on the same side of the road. (No Noise)
-
-["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates. 
-
-## Details
-
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
-
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
-
-## Tips
-
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
-
----
-
-## Dependencies
-
-* cmake >= 3.5
-  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
 
 
-## Call for IDE Profiles Pull Requests
+## Goals
+In this project the goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
 
-Help your fellow students!
+## Solution Overview
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
+I use a finite state machine (FSM), with 3 defined states, such as keep_lane, change_lane_left, and change_lane_right. At every cycle, the fsm evaluates all the possible transitions. Each transition is associated with a trajectory planned out for the car (in the form of waypoints) and a cost. The FSM transitions into the state with the lowest transition cost. See fsm.cpp/next_state().
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+### Trajectory Generation
+There are a few options to generate trajectories. In the course, we went over the jerk-minimizing-trajectory method. I didn't adopt that approach because it requires us to specify the end state location. In the case of straight highway driving, the ego car does not have a defined location it must reach in a given time. But rather, it just needs to speed up / slow down when necessary.
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+Here I propose an original method. See details at path.cpp/_jerk_constrained_spacings(). The basic idea is we acclerate with the maximal acceleration and jerk that the passenger is comfortable with to get to the target speed. I set it to 2.6 m/s^2 for accleration and 2 m/s^3 for jerk. If the car is about to approach target speed, we lower the acceleration  and smoothly transition to a constant movement with 0 accleration. If the car is over speed limit, we gently start braking with a comfortable level of jerkiness. So this method will give us a list of spacings between way points: how far the car should travel every 0.02 seconds.
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+Separately, I fit a spline to a few anchor points. In the case of straight driving, I anchor on a few points straight ahead in the current lane (same d in frenet coordinate, and a few meters apart in s). See path.cpp/get_straight_trajectory().
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+The spacings control for how fast the car should drive (and thus tell us how far apart the waypoints should be), and the spline tells us the trajectory the car should drive on (and thus tells us which curve the waypoints are drawn from). To map the spacings onto the trajectory, I start at the last way point, find the tangent at that point in the spline, and locate the next waypoint's x coordinate in relation to the last waypoint's x coordinate using cosine of that angle. Repeat this process and we will get all the waypoints.
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+### How to slow down when there is a car ahead
+When generating a straight trajectory, we check whether there will is any car in front of us within our safe following distance (see utils.cpp/get_car_in_front_speed()). If there isn't one, to save computation, we keep the previously generated waypoints and just append a few new points to the end. If there is a car in front, then we need to slow down to that car's speed as soon as possible. To avoid too sudden a transition, instead of scratching off the previous path completely, we still retain a few points (buffer points) from the previous way points, and repalce the rest of the waypoints with a new plan to adapt to the situation. If that car is now out of our way, we will speed back up to the speed limit. All the logic is handled in path.cpp/get_straight_trajectory().
 
+
+### Cost functions: knows to switch lane when the car ahead is too slow
+We use a simple cost function here: how far away is the car from the speed limit at the end of the currently planned trajectory. If we switch lanes, we add a fixed overhead cost (because if all else equal, we prefer not to change lanes frequently!) -- a lower cost to switch left and a higher cost to switch lane right (because passing on the right is frowned upon).
+
+In addition, there are a few hard constraints for impossible transitions: when in the leftmost lane, the cost of switching further left is at the highest (99). Similarly, if we are switching left, but see cars on the left that will collide with us, the cost is also at the highest.
+
+See utils.cpp/get_keep_lane_cost() and utils.cpp/get_lane_switch_cost().
+
+### Adjustable speed limit
+With the above implementation, the car intelligently plans its path, but at times it will exceed maximal acceleration. Upon further investigation, when this happened, I saw it was usually exceeding normal accleration while having a 0 tangential acceleration. This means that, even though the car is driving within the speed limit, part of the highway is too windy that we need to slow down to reduce the centripetal acceleration (perhaps the highway should have better speed limit!). To account for for that, I added a logic to adjust the speed limit depending on how curvy the road is. See utils.cpp/get_speed_limit().
+
+Essentially, we quantify how windy the road is by locating 2 points X distance apart in frenet s coordinate and then draw a straight line between them and measure their cartesian distance. The smaller cartesian distance : X ratio is, the curvier the segment of the road is. To see this, for a straight road, cartesian distance : X = 1. I subtract from the speed limit based on how far away this ratio is from 1.
+
+## Future work
+I started with a simple fsm with 3 states. To better swtich lanes, in future, we can add states such as prepare_to_switch_left and prepare_to_switch_right. This way, it can also know when to slow down first and then switch lane.
+
+We are using a simple cost function now and it's worth improving. For example, it can incorporate jerkiness, accleration, etc. all as part of the cost in future.
+
+The adjustable speed limit is very much based on heuristic right now to avoid the "exceed max accelration" error. Someitmes, we still exceed max acceleration and other times, it is driving too slow. Ideally, we can read the nromal acceleration data directly and control for that.
+
+Lastly, we currently don't predict other cars' behavior, and assume that they will all drive straight ahead at their current speed. In highway driving this is generally not a problem. But prediction can help foresee situations where the car on the right is about to switch into our lane. Then we can slow down before the car switches into our lane.

@@ -306,5 +306,6 @@ double get_speed_limit(const MeasurementPackage &m){
     // clip between 5 and SPEED_LIMIT
     double speed_limit = std::min(std::max(SPEED_LIMIT * (
         1 - (1 - min_dist / spacing) * 5.), 5.), SPEED_LIMIT);
+    cout << "speed_limit: " << speed_limit << endl;
     return speed_limit;
 }
