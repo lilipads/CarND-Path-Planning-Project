@@ -18,7 +18,7 @@ const double SPEED_LIMIT = 20; // 22 meter / second = 49.2 miles per hour
 const double MPH_TO_MPS_CONVERSION = 0.44; // 1 mile per hour = 0.44 meter / s
 const double LANE_WIDTH = 4; // meter
 const double MAX_LANE = 2; // max lane number
-const double EXPECTED_ACCELERATION= 2.6; // meter / second ^2
+const double EXPECTED_ACCELERATION = 2.6; // meter / second ^2
 const double EXPECTED_JERK = 2; // m/s/s/s
 const double REACTION_SECONDS = 1; // must be 1 second away from the car in front
 
@@ -28,19 +28,6 @@ const int BUFFER_POINTS = 10; // start changing course of actions only after 10 
 const double HIGHEST_COST = 99;
 const double LEFT_LANE_SWITCH_FIXED_COST = 2; // fixed overhead cost for switching lanes
 const double RIGHT_LANE_SWITCH_FIXED_COST = 3; // fixed overhead cost for switching lanes
-
-/*
- * useful struct
- */
-
-struct PlannedPath {
-    double end_velocity;
-    double end_acceleration;
-    vector<double> spacings; // distance spacing between every WAYPOINT INTERVAL
-    vector<double> next_x_vals;
-    vector<double> next_y_vals;
-    double cost;
-};
 
 
 /*
@@ -53,7 +40,12 @@ int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vect
 int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x, const vector<double> &maps_y);
 
 
-// coordinates transformations
+
+/*
+ * coordinates transformations
+ */ 
+
+
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 // return vector {frenet_s,frenet_d}
 vector<double> map_to_frenet_coordinates(double x, double y, double theta,
@@ -84,9 +76,6 @@ return -1 if no car is in front within safe distance
 */
 double get_car_in_front_speed(double previous_path_end_velocity, double previous_path_end_s, const MeasurementPackage &m);
 
-
-// when driving with maximum acceleration within comfortable level of jerk and acceleration limit
-PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
 
 /* return highest cost if it's not safe to switch lane
  * else, cost is determined by the speed of the car ahead 

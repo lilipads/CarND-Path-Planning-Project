@@ -89,6 +89,11 @@ int main() {
         string event = j[0].get<string>();
         
         if (event == "telemetry") {
+
+            /*
+             * STEP 1: load everything into measurment package
+             */ 
+            
             MeasurementPackage measurement_package;
 
             // j[1] is the data JSON object            
@@ -143,6 +148,12 @@ int main() {
             measurement_package.map_waypoints_dx = map_waypoints_dx;
             measurement_package.map_waypoints_dy = map_waypoints_dy;
 
+
+
+            /*
+             * STEP 2: get next state for the finite state machine
+             */ 
+            
             json msgJson = fsm.next_state(measurement_package);
             auto msg = "42[\"control\","+ msgJson.dump()+"]";
 

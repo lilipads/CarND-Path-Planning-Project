@@ -210,55 +210,6 @@ double get_car_in_front_speed(double previous_path_end_velocity, double previous
 }
 
 
-/* when driving with maximum acceleration within comfortable level of jerk and acceleration limit
-  return distance spacing between every WAYPOINT INTERVAL
-*/
-PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, 
-    double target_velocity, int n){
-    PlannedPath planned_path;
-    double delta_speed_from_zero_acc_to_max_acc = 1. / 2 * EXPECTED_ACCELERATION * EXPECTED_ACCELERATION / EXPECTED_JERK;
-
-    for (int i = 0; i < n; i++){
-        if (target_velocity - current_velocity > delta_speed_from_zero_acc_to_max_acc){
-            if (current_acceleration < 0){
-                // cout << "acc" << endl;
-                current_acceleration = 0;
-            }
-            else{
-                // cout << "increment acc" << endl;
-                // acceleration with expected jerk
-                current_acceleration += std::min(EXPECTED_ACCELERATION - current_acceleration,
-                    EXPECTED_JERK * WAYPOINT_INTERVAL);
-            }
-        }
-        // approaching target velocity, slow down acceleration
-        else if (target_velocity - current_velocity >= 0) {
-            current_acceleration = std::max(current_acceleration - EXPECTED_JERK * WAYPOINT_INTERVAL, 0.);
-        }
-        // exceed speed limit
-        else {
-            if (current_acceleration > 0){
-                // cout << "decc" << endl;
-                current_acceleration = 0;
-            }
-            else {
-                current_acceleration -= std::min(EXPECTED_ACCELERATION + current_acceleration,
-                    EXPECTED_JERK * WAYPOINT_INTERVAL);
-            }
-        }
-        current_velocity += current_acceleration * WAYPOINT_INTERVAL;
-        planned_path.spacings.push_back(current_velocity * WAYPOINT_INTERVAL);
-
-        // cout << "current acceleration: " << current_acceleration << ", " 
-        // << "current velocity: " << current_velocity << endl;
-    }
-
-    planned_path.end_acceleration = current_acceleration;
-    planned_path.end_velocity = current_velocity;
-    return planned_path;
-}
-
-
 /* return highest cost if it's not safe to switch lane
  * else, cost is determined by the speed of the car ahead 
  * in the lane I am about to switch into
@@ -324,24 +275,37 @@ double get_keep_lane_cost(const MeasurementPackage &m){
  * because otherwise the centripetal acceleration can be too high
  */ 
 double get_speed_limit(const MeasurementPackage &m){
+    // we find curvature by locating 2 points X distance apart in frenet s coordinate
+    // and also measure their cartesian distance. 
+    // the smaller cartesian distance : X ratio is, the curvier the segment of the road is
+
     double spacing = 10;
-    vector<double> anchor_point0 = frenet_to_map_coordinates(
-        m.car_s + spacing, 
-        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
-    vector<double> anchor_point1 = frenet_to_map_coordinates(
-        m.car_s + spacing, 
-        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
-    vector<double> anchor_point2 = frenet_to_map_coordinates(
-        m.car_s + spacing * 2, 
-        m.car_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y);
-    double dist0 = sqrt((anchor_point1[0] - anchor_point0[0]) * 
-        (anchor_point1[0] - anchor_point0[0]) + (anchor_point1[1] - anchor_point0[1]) * 
-        (anchor_point1[1] - anchor_point0[1]));
-    double dist1 = sqrt((anchor_point1[0] - anchor_point2[0]) * 
-        (anchor_point1[0] - anchor_point2[0]) + (anchor_point1[1] - anchor_point2[1]) * 
-        (anchor_point1[1] - anchor_point2[1]));
-    double speed_limit = SPEED_LIMIT - std::min(std::max(1 - std::min(dist0, dist1) / spacing,
-        0.) * 50., 5.);
-    cout << "speed_limit: " << speed_limit << endl;
+    int segments = 10;
+    vector<vector<double>> anchor_points;
+    double min_dist = spacing;
+
+
+    for (int i = 0; i < segments; i++){
+        anchor_points.push_back(frenet_to_map_coordinates(
+            m.car_s + spacing * i, m.car_d, m.map_waypoints_s,
+            m.map_waypoints_x, m.map_waypoints_y));
+    }
+
+    // check for maximum curvature (i.e. min cartesian distance) in all the segments
+    for (int i = 1; i < segments; i++){
+        cout << i;
+        double dist = sqrt((anchor_points[i][0] - anchor_points[i - 1][0]) * 
+            (anchor_points[i][0] - anchor_points[i - 1][0]) +
+            (anchor_points[i][1] - anchor_points[i - 1][1]) * 
+            (anchor_points[i][1] - anchor_points[i - 1][1]));
+        if (dist < min_dist){
+            min_dist = dist;
+        }
+    }
+
+    // lower speed limit proportional to (1 - min_distance / spacing ratio)
+    // clip between 5 and SPEED_LIMIT
+    double speed_limit = std::min(std::max(SPEED_LIMIT * (
+        1 - (1 - min_dist / spacing) * 5.), 5.), SPEED_LIMIT);
     return speed_limit;
 }

@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "utils.h"
 #include "measurement_package.h"
-#include "spline.h"
+#include "path.h"
 
 using namespace std;
 
@@ -73,20 +73,5 @@ private:
 
 State * get_state(StateName state, double end_velocity, double end_acceleration,
 	double speed_limit);
-
-// when driving with maximum acceleration within comfortable level of jerk and acceleration limit
-PlannedPath jerk_constrained_spacings(double current_velocity, double current_acceleration, double target_velocity, int n);
-
-PlannedPath get_straight_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration,
-	double speed_limit);
-
-PlannedPath extend_straight_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration,
-	double speed_limit);
-
-PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
-	double previous_path_end_velocity, double previous_path_end_acceleration,
-	int delta_lane, double speed_limit);
 
 #endif /* STATE_H_ */
