@@ -81,29 +81,14 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
      * get the spacings between way points
      */
 
-    // calculate car state by buffer end time
-    double buffer_end_acceleration = 0.;
-    double buffer_end_speed = m.car_speed;
-
-    if (m.previous_path_x.size() >= 2){
-        double distance2 = sqrt(pow((m.previous_path_x[BUFFER_POINTS] -
-            m.previous_path_x[BUFFER_POINTS - 1]), 2) +
-            pow((m.previous_path_y[BUFFER_POINTS] -
-                m.previous_path_y[BUFFER_POINTS - 1]), 2));
-        double distance1 = sqrt(pow((m.previous_path_x[BUFFER_POINTS - 1] -
-            m.previous_path_x[BUFFER_POINTS - 2]), 2) +
-            pow((m.previous_path_y[BUFFER_POINTS - 1] -
-                m.previous_path_y[BUFFER_POINTS - 2]), 2));
-        buffer_end_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
-            WAYPOINT_INTERVAL;
-        buffer_end_speed = distance1 / WAYPOINT_INTERVAL;
-    }
-
-    // get the spacings: keep constant speed when switching lane
-    double starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
+    vector<double> result =  _get_buffer_end_state(m);
+    double buffer_end_speed = result[0];
+    double buffer_end_acceleration = result[1];
     int points_to_produce = NUM_WAYPOINTS * 4;
+    // keep constant speed when switching lane
     PlannedPath planned_path = _jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration,
     	buffer_end_speed, points_to_produce);
+
 
 
     /*
@@ -115,6 +100,9 @@ PlannedPath get_lane_switch_trajectory(const MeasurementPackage &m,
         planned_path.next_x_vals.push_back(m.previous_path_x[i]);
         planned_path.next_y_vals.push_back(m.previous_path_y[i]);
     }
+
+    double starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
+
     _get_trajectory(anchor_x, anchor_y, starting_x_in_car_coordinates, planned_path,
 		points_to_produce, m);
 
@@ -126,70 +114,31 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
     double previous_path_end_velocity, double previous_path_end_acceleration,
     double speed_limit){
 
-    /*
-     * create a spline bsaed on some anchort points (in car coordinates)
-     * anchored on: previous planned path (or if empty, current car position)
-     * and 20 meters out from the last point of the previous path
+    /* 
+     * anchor points for the spline
      */
-    tk::spline s; 
 
     vector<double> anchor_x;
     vector<double> anchor_y;
 
-    // starting anchor points: previous planned path. translate it to car coordinates
-    for (int i = 0; i < m.previous_path_x.size(); i++){
-        vector<double> anchor_point = map_to_car_coordinates(
-            m.previous_path_x[i], m.previous_path_y[i], m.car_x, m.car_y, m.car_yaw);
-        anchor_x.push_back(anchor_point[0]);
-        anchor_y.push_back(anchor_point[1]);
-    }
-
-    // additional anchor points: extend anchor_point_spacing * 2 meters out from the last planned waypoint 
+    // additional anchor points: 2 points straight ahead from the last planned waypoint 
     double center_d = get_lane_center(get_lane(m.end_path_d));
     int anchor_point_spacing = 30;
-
-    for (int i = 1; i < 3; i++){
-        vector<double> anchor_point = frenet_to_car_coordinates(
-            m.end_path_s + i * anchor_point_spacing, 
-            center_d, m.map_waypoints_s, m.map_waypoints_x, m.map_waypoints_y,
-            m.car_x, m.car_y, m.car_yaw);
-        anchor_x.push_back(anchor_point[0]);
-        anchor_y.push_back(anchor_point[1]);
-    }
-
-    s.set_points(anchor_x, anchor_y);
+    bool append_to_current_path = true;
+    vector<double> anchor_points_in_d = {center_d, center_d};
+   	
+    _get_anchor_points(append_to_current_path, anchor_x, anchor_y,
+        anchor_points_in_d, m, anchor_point_spacing);
 
 
     /*
      * read points from created spline
      * define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
      */
-
-    // only retain the first <BUFFER_POINTS> way points from the previous path
-    vector <double> next_x_vals;
-    vector <double> next_y_vals;
-    for (int i = 0; i < BUFFER_POINTS; i++){
-        next_x_vals.push_back(m.previous_path_x[i]);
-        next_y_vals.push_back(m.previous_path_y[i]);
-    }
-
-    // calculate car state by buffer end time
-    double buffer_end_acceleration = 0.;
-    double buffer_end_speed = m.car_speed;
-
-    if (m.previous_path_x.size() >= 2){
-        double distance2 = sqrt(pow((m.previous_path_x[BUFFER_POINTS] -
-            m.previous_path_x[BUFFER_POINTS - 1]), 2) +
-            pow((m.previous_path_y[BUFFER_POINTS] -
-                m.previous_path_y[BUFFER_POINTS - 1]), 2));
-        double distance1 = sqrt(pow((m.previous_path_x[BUFFER_POINTS - 1] -
-            m.previous_path_x[BUFFER_POINTS - 2]), 2) +
-            pow((m.previous_path_y[BUFFER_POINTS - 1] -
-                m.previous_path_y[BUFFER_POINTS - 2]), 2));
-        buffer_end_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
-            WAYPOINT_INTERVAL;
-        buffer_end_speed = distance1 / WAYPOINT_INTERVAL;
-    }
+    
+    vector<double> result =  _get_buffer_end_state(m);
+    double buffer_end_speed = result[0];
+    double buffer_end_acceleration = result[1];
 
     PlannedPath planned_path;
     int points_to_produce;
@@ -197,52 +146,43 @@ PlannedPath get_straight_trajectory(const MeasurementPackage &m,
     double car_in_front_speed = get_car_in_front_speed(previous_path_end_velocity, m.end_path_s, 
         m);
     
-    // if there is no car in front
-    if (car_in_front_speed < 0) {
-        // if no car in front and car is not deccelerating, just append onto previously planned waypoints
-        if (buffer_end_acceleration >= 0){
-            next_x_vals = m.previous_path_x;
-            next_y_vals = m.previous_path_y;
-            points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
-            planned_path = _jerk_constrained_spacings(previous_path_end_velocity,
-                previous_path_end_acceleration, speed_limit,
-                points_to_produce);
-            starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
-        }
-        // if no car in front but car is deccelerating, redo the path beyond buffer
-        else{
-            points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
-            planned_path = _jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration, speed_limit, points_to_produce);
-            starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
-        }
-    }
-    // if there is car in front, clear previously planned path and reduce to their car's speed
+    // if there is no car in front and car is not deccelerating, just append onto previously planned waypoints
+    if ((car_in_front_speed < 0) && (buffer_end_acceleration >= 0)) { 
+        points_to_produce = NUM_WAYPOINTS - m.previous_path_x.size();
+        starting_x_in_car_coordinates = anchor_x[m.previous_path_x.size() - 1];
+        planned_path = _jerk_constrained_spacings(previous_path_end_velocity,
+            previous_path_end_acceleration, speed_limit,
+            points_to_produce);
+        planned_path.next_x_vals = m.previous_path_x;
+        planned_path.next_y_vals = m.previous_path_y;
+     }
+    // else redo the path beyond buffer
     else{
-        points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
+    	points_to_produce = NUM_WAYPOINTS - BUFFER_POINTS;
+    	starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
 
-        planned_path = _jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration,
-            car_in_front_speed, points_to_produce);
-        starting_x_in_car_coordinates = anchor_x[BUFFER_POINTS - 1];
-    }
+	    // if no car in front anymore but ego car is deccelerating, get up to speed
+	    if ((car_in_front_speed < 0) && (buffer_end_acceleration < 0)){
+	        planned_path = _jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration,
+	        	speed_limit, points_to_produce);
+	    }
+	    // if there is car in front, reduce to their car's speed
+	    else{
+	        planned_path = _jerk_constrained_spacings(buffer_end_speed, buffer_end_acceleration,
+	            car_in_front_speed, points_to_produce);
+	    }
 
-
-    double x = starting_x_in_car_coordinates;
-    vector<double> map_point;
-    for (int i = 0; i < points_to_produce; i++){
-        // calculate angle at spline
-        double delta_x = 5;
-        double tangent_angle = atan2(s(x + delta_x) - s(x), delta_x);
-        x += planned_path.spacings[i] * cos(tangent_angle);
-        map_point = car_to_map_coordinates(x, s(x), m.car_x, m.car_y, m.car_yaw);
-        next_x_vals.push_back(map_point[0]);
-        next_y_vals.push_back(map_point[1]);
-    }
+	    for (int i = 0; i < BUFFER_POINTS; i++){
+	        planned_path.next_x_vals.push_back(m.previous_path_x[i]);
+	        planned_path.next_y_vals.push_back(m.previous_path_y[i]);
+	    }
+	}
 
     /*
-     * set end state of this planned path
+     * get the trajectory: fill in the next_x_vals and next_y_vals for the planned path
      */
-    planned_path.next_x_vals = next_x_vals;
-    planned_path.next_y_vals = next_y_vals;
+    _get_trajectory(anchor_x, anchor_y, starting_x_in_car_coordinates, planned_path,
+        points_to_produce, m);
 
     return planned_path;
 }
@@ -398,6 +338,8 @@ void _get_anchor_points(bool append_to_current_path, vector<double> & anchor_x,
 		num_previous_points = m.previous_path_x.size();
 		starting_s = m.end_path_s;
 	}
+	// we need to retain some buffer points instead of scratching everything
+	// because otherwise the simulator will run into issues due to time lag
 	else{
 		num_previous_points = BUFFER_POINTS;
 		// s of the end of the buffer
@@ -427,3 +369,29 @@ void _get_anchor_points(bool append_to_current_path, vector<double> & anchor_x,
     }
 }
 
+
+/* 
+ * return vector: {velocity at the end of the buffer, acceleration at the end of the buffer}
+ */
+vector<double> _get_buffer_end_state(const MeasurementPackage &m){
+	// calculate car state by buffer end time
+    double buffer_end_acceleration = 0.;
+    double buffer_end_speed = m.car_speed;
+
+    if (m.previous_path_x.size() >= 2){
+        double distance2 = sqrt(pow((m.previous_path_x[BUFFER_POINTS] -
+            m.previous_path_x[BUFFER_POINTS - 1]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS] -
+                m.previous_path_y[BUFFER_POINTS - 1]), 2));
+        double distance1 = sqrt(pow((m.previous_path_x[BUFFER_POINTS - 1] -
+            m.previous_path_x[BUFFER_POINTS - 2]), 2) +
+            pow((m.previous_path_y[BUFFER_POINTS - 1] -
+                m.previous_path_y[BUFFER_POINTS - 2]), 2));
+        buffer_end_acceleration = (distance2 - distance1) / WAYPOINT_INTERVAL /
+            WAYPOINT_INTERVAL;
+        buffer_end_speed = distance1 / WAYPOINT_INTERVAL;
+    }
+
+    vector<double> result = {buffer_end_speed, buffer_end_acceleration};
+    return result;
+}

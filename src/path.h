@@ -52,4 +52,7 @@ void _get_anchor_points(bool append_to_current_path, vector<double> & anchor_x,
 	vector<double> & anchor_y, vector<double> anchor_points_in_d, const MeasurementPackage &m,
 	double anchor_point_spacing);
 
+// return vector: {velocity at the end of the buffer, acceleration at the end of the buffer}
+vector<double> _get_buffer_end_state(const MeasurementPackage &m);
+
 #endif /* UTILS_H_ */
