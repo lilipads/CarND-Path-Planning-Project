@@ -5,6 +5,9 @@
 In this project the goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
 
 ## Solution Overview
+See demo for the planned lane change behavior when the ego car detects a slow-driving car ahead:
+
+![demo](demo.gif)
 
 I use a finite state machine (FSM), with 3 defined states, such as keep_lane, change_lane_left, and change_lane_right. At every cycle, the fsm evaluates all the possible transitions. Each transition is associated with a trajectory planned out for the car (in the form of waypoints) and a cost. The FSM transitions into the state with the lowest transition cost. See fsm.cpp/next_state().
 
