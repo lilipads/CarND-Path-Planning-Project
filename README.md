@@ -22,7 +22,7 @@ The spacings control for how fast the car should drive (and thus tell us how far
 
 
 ### How to slow down when there is a car ahead
-When generating a straight trajectory, we check whether there will is any car in front of us within our safe following distance (see utils.cpp/get_car_in_front_speed()). If there isn't one, to save computation, we keep the previously generated waypoints and just append a few new points to the end. If there is a car in front, then we need to slow down to that car's speed as soon as possible. To avoid too sudden a transition, instead of scratching off the previous path completely, we still retain a few points (buffer points) from the previous way points, and repalce the rest of the waypoints with a new plan to adapt to the situation. If that car is now out of our way, we will speed back up to the speed limit. All the logic is handled in path.cpp/get_straight_trajectory().
+When generating a straight trajectory, we check whether there is any car in front of us within our safe following distance (see utils.cpp/get_car_in_front_speed()). If there isn't one, to save computation, we keep the previously generated waypoints and just append a few new points to the end. If there is a car in front, then we need to slow down to that car's speed as soon as possible. To avoid too sudden a transition, instead of scratching off the previous path completely, we still retain a few points (buffer points) from the previous way points, and replace the rest of the waypoints with a new plan to adapt to the situation. If that car is now out of our way, we will speed back up to the speed limit. All the logic is handled in path.cpp/get_straight_trajectory().
 
 
 ### Cost functions: knows to switch lane when the car ahead is too slow
@@ -42,6 +42,6 @@ I started with a simple fsm with 3 states. To better swtich lanes, in future, we
 
 We are using a simple cost function now and it's worth improving. For example, it can incorporate jerkiness, accleration, etc. all as part of the cost in future.
 
-The adjustable speed limit is very much based on heuristic right now to avoid the "exceed max accelration" error. Someitmes, we still exceed max acceleration and other times, it is driving too slow. Ideally, we can read the nromal acceleration data directly and control for that.
+The adjustable speed limit is very much based on heuristic right now to avoid the "exceed max accelration" error. Sometimes, we still exceed max acceleration and other times, it is driving too slow. Ideally, we can read the nromal acceleration data directly and control for that.
 
 Lastly, we currently don't predict other cars' behavior, and assume that they will all drive straight ahead at their current speed. In highway driving this is generally not a problem. But prediction can help foresee situations where the car on the right is about to switch into our lane. Then we can slow down before the car switches into our lane.
